@@ -29,3 +29,5 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Tool and distribution tests
         run: python3 -m unittest discover -s tools -p 'test_*.py'
+      - name: Office complementarity tests
+        run: python3 -m unittest discover -s claude-office -p 'test_*.py'

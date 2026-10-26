@@ -1,5 +1,10 @@
 # 변경 기록
 
+## 2026-10-26 — 사무실 실험 복사본
+
+- `repo-baseline` `1ddf420`을 이 저장소의 출발점으로 복사했다. 제품 적용 원본과 smallnext·BGLike·mobile-runtime은 바꾸지 않는다.
+- `claude-office/`에 역할 폴더, 과제 INTENT, 관문 5칸, staging만 허용하는 배포 도구를 두었다. 기준 검사는 원본과 같은 unittest 명령을 호출한다.
+
 ## 2026-10-26 — 공개 저장소 전환
 
 - 현재 파일·Git refs의 전체 이력·GitHub PR/댓글/실행 자료를 민감정보 점검한 뒤 public으로 전환했다. 기존 clone과 복사 기반 배포 방식은 유지한다.

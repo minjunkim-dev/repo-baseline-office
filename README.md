@@ -1,7 +1,8 @@
-# repo-baseline
+# repo-baseline-office
 
-1인 개발 저장소의 GitHub 설정·CI 기준을 한 곳에서 관리하는 원본 저장소다.
-새 프로젝트를 셋업하거나 기존 프로젝트를 다시 맞출 때 같은 결과가 나오게 한다.
+`minjunkim-dev/repo-baseline`의 `1ddf420`을 복사한 실험 저장소다. 제품에 다시 적용하는 원본은 그 저장소이고, 이 저장소는 그 기준과 Claude Code 팀 운영을 함께 확인하는 곳이다. `claude-office/`는 제품 복사 manifest에 들어 있지 않다.
+
+아래는 복사해 온 기준이다. 1인 개발 저장소의 GitHub 설정·CI를 같은 결과로 맞춘다.
 
 ## 구조
 
