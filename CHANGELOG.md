@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 2026-10-26 — 사무실 규칙을 AGENTS.md로 전환
+
+- `claude-office/`의 공통 규칙과 역할 규칙을 `CLAUDE.md`에서 `AGENTS.md`로 옮겼다. 초기 설정도 스킬 블록을 `AGENTS.md`에 둔다.
+
 ## 2026-10-26 — 사무실 실험 복사본
 
 - `repo-baseline` `1ddf420`을 이 저장소의 출발점으로 복사했다. 제품 적용 원본과 smallnext·BGLike·mobile-runtime은 바꾸지 않는다.
