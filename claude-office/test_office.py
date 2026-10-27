@@ -43,13 +43,19 @@ class OfficeBoundaryTests(unittest.TestCase):
         run_gates = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(run_gates)
         run_gates.COMMANDS = ([sys.executable, "-c", "pass"],)
+        run_gates.head_state = lambda: ("a" * 40, [])
         with tempfile.TemporaryDirectory() as tmp:
             task = Path(tmp) / "sample-task"
             task.mkdir()
             (task / "INTENT.md").write_text("# sample-task\n", encoding="utf-8")
             self.assertEqual(run_gates.main([str(task)]), 0)
             report = (task / "REPORT.md").read_text(encoding="utf-8")
-        self.assertTrue(report.startswith("# sample-task 관문 보고"))
+            self.assertTrue(report.startswith("# sample-task 관문 보고"))
+            self.assertIn("- 커밋: `" + "a" * 40 + "`", report)
+            # Uncommitted changes outside the office fail the gate even when every test passes.
+            run_gates.head_state = lambda: ("a" * 40, ["scripts/check_repo_baseline.py"])
+            self.assertEqual(run_gates.main([str(task)]), 1)
+            self.assertIn("커밋하지 않은 변경 1개", (task / "REPORT.md").read_text(encoding="utf-8"))
 
     def test_copied_manifest_excludes_the_office(self):
         manifest = (ROOT / "templates/repo-baseline.json").read_text(encoding="utf-8")
@@ -84,6 +90,15 @@ class OfficeBoundaryTests(unittest.TestCase):
     def test_rules_live_in_agents_files(self):
         self.assertEqual(list(OFFICE.rglob("CLAUDE.md")), [])
         self.assertIn("`AGENTS.md`", (OFFICE / "AGENTS.md").read_text(encoding="utf-8"))
+
+    def test_handoff_names_a_committed_head(self):
+        # A worker once handed off uncommitted changes and leader still asked for a merge.
+        for role, words in (("worker-01", ("커밋", "QUALITY_GATES.md")), ("reviewer", ("커밋 SHA",)),
+                            ("leader", ("커밋 SHA", "커밋하지 않은 변경"))):
+            rules = (OFFICE / role / "AGENTS.md").read_text(encoding="utf-8")
+            for word in words:
+                self.assertIn(word, rules, role)
+        self.assertIn("커밋 SHA", (OFFICE / "QUALITY_GATES.md").read_text(encoding="utf-8"))
 
     def test_worker_does_not_own_baseline_files(self):
         rules = (OFFICE / "worker-01/AGENTS.md").read_text(encoding="utf-8")

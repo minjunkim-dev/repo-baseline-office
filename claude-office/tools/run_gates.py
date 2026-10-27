@@ -18,14 +18,22 @@ COMMANDS = (
 )
 
 
+def head_state():
+    """The commit the gates run on, and changes outside the office that are not in it."""
+    git = lambda *args: subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout  # noqa: E731
+    dirty = [line[3:] for line in git("status", "--porcelain").splitlines() if not line[3:].startswith("claude-office/")]
+    return git("rev-parse", "HEAD").strip(), dirty
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 1 or not (Path(argv[0]) / "INTENT.md").is_file():
         print("usage: run_gates.py <task folder with INTENT.md>", file=sys.stderr)
         return 2
     task = Path(argv[0]).resolve()
-    lines = [f"# {task.name} 관문 보고", ""]
-    failed = False
+    sha, dirty = head_state()
+    lines = [f"# {task.name} 관문 보고", "", f"- 커밋: `{sha}`" + (f". 커밋하지 않은 변경 {len(dirty)}개가 있어 넘기지 않는다: " + ", ".join(dirty) if dirty else "")]
+    failed = bool(dirty)
     for command in COMMANDS:
         result = subprocess.run(command, cwd=ROOT)
         shown = " ".join(f"'{part}'" if part == "test_*.py" else part for part in command[2:])
