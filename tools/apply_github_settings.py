@@ -207,9 +207,11 @@ def plan(profile, read=None):
                 manual.extend(f"protection.{key} is set; writing protection would reset it" for key in kept)
                 continue
         if name == "codeql" and expected[name]["state"] == "not-configured" and "codeql_workflow" in expected:
-            replacement = [key for key in ("codeql_workflow", "codeql_main_source") if checker.differences(
-                expected[key], get(read, f"{prefix}/{endpoint(key, branch)}")[0], key)]
-            if replacement:
+            found = {key: get(read, f"{prefix}/{endpoint(key, branch)}")[0] for key in ("codeql_workflow", "codeql_main_source")}
+            # The workflow must really run, whatever state the baseline records for it.
+            ready = (found["codeql_workflow"] or {}).get("state") == "active" and not any(
+                checker.differences(expected[key], value, key) for key, value in found.items())
+            if not ready:
                 manual.append("codeql.state: default setup stays on until the advanced workflow is active and pinned on main")
                 continue
         shown = [(path, value_at(actual, path), value_at(expected[name], path)) for path in drift]

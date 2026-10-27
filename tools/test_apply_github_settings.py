@@ -240,6 +240,12 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
         self.run_tool(server, profile, apply=True)  # active, but main does not hold the pinned file yet
         self.assertNotIn(("PATCH", "code-scanning/default-setup"), server.writes)
         server.state[tool.endpoint("codeql_main_source", "main")] = {"path": workflow, "type": "file", "sha": "0" * 40}
+        disabled = copy.deepcopy(profile)  # a baseline that records a disabled workflow must not turn scanning off
+        disabled["expected"]["codeql_workflow"]["state"] = "disabled_manually"
+        server.state["actions/workflows/codeql.yml"]["state"] = "disabled_manually"
+        self.run_tool(server, disabled, apply=True)
+        self.assertNotIn(("PATCH", "code-scanning/default-setup"), server.writes)
+        server.state["actions/workflows/codeql.yml"]["state"] = "active"
         self.run_tool(server, profile, apply=True)
         self.assertIn(("PATCH", "code-scanning/default-setup"), server.writes)
 
