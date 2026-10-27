@@ -237,6 +237,9 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
         self.assertNotIn(("PATCH", "code-scanning/default-setup"), server.writes)
         self.assertIn("MANUAL: codeql.state: default setup stays on", out)
         server.state["actions/workflows/codeql.yml"] = {"path": workflow, "state": "active"}
+        self.run_tool(server, profile, apply=True)  # active, but main does not hold the pinned file yet
+        self.assertNotIn(("PATCH", "code-scanning/default-setup"), server.writes)
+        server.state[tool.endpoint("codeql_main_source", "main")] = {"path": workflow, "type": "file", "sha": "0" * 40}
         self.run_tool(server, profile, apply=True)
         self.assertIn(("PATCH", "code-scanning/default-setup"), server.writes)
 

@@ -15,7 +15,7 @@ It never changes visibility, rulesets, workflow files, fields the auditor does n
 require, or branch protection that carries settings the baseline does not manage
 (signed commits, push restrictions, blocked creations, fork syncing, review bypass
 or dismissal lists); those are printed as MANUAL. Under an advanced CodeQL baseline
-it keeps default setup on until the CodeQL workflow is active. Declared exceptions
+it keeps default setup on until the CodeQL workflow is active and matches its pin on main. Declared exceptions
 are never written. Unfilled template values ("REPLACE...") stop it before any read.
 """
 
@@ -207,9 +207,10 @@ def plan(profile, read=None):
                 manual.extend(f"protection.{key} is set; writing protection would reset it" for key in kept)
                 continue
         if name == "codeql" and expected[name]["state"] == "not-configured" and "codeql_workflow" in expected:
-            workflow, _ = get(read, f"{prefix}/{endpoint('codeql_workflow', branch)}")
-            if checker.differences(expected["codeql_workflow"], workflow, "codeql_workflow"):
-                manual.append("codeql.state: default setup stays on until the advanced workflow is active")
+            replacement = [key for key in ("codeql_workflow", "codeql_main_source") if checker.differences(
+                expected[key], get(read, f"{prefix}/{endpoint(key, branch)}")[0], key)]
+            if replacement:
+                manual.append("codeql.state: default setup stays on until the advanced workflow is active and pinned on main")
                 continue
         shown = [(path, value_at(actual, path), value_at(expected[name], path)) for path in drift]
         changes.append((shown, writes_for(name, expected[name], prefix, branch)))
