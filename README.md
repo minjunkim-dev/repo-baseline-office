@@ -15,8 +15,10 @@
 | `prompts/pr-ci-setup.md` | 문서·CI·리뷰·병합 절차 | 아니요. 에이전트 채팅에 첨부한다 |
 | `templates/dependabot.yml`, `templates/dependabot-ecosystem.yml` | Dependabot 설정 원본 | 예. manifest의 `ecosystems` 목록으로 `.github/dependabot.yml`을 생성한다 |
 | `templates/repo-baseline.json` | 복사 목록(manifest) 시작점 | 예. `.github/repo-baseline.json`으로 둔다 |
+| `templates/repository-settings.json` | GitHub 설정 기준선 시작점 | 예. `.github/repository-settings.json`으로 두고 `REPLACE` 값과 저장소 정보를 채운다 |
 | `scripts/` | 프로젝트에 그대로 복사하는 검사기와 테스트 | 예. 수정하지 않는다 |
 | `tools/apply_baseline.py` | `scripts/`를 프로젝트에 복사하고 해시를 기록 | 아니요 |
+| `tools/apply_github_settings.py` | 설정 기준선과 다른 GitHub 서버 설정을 계획·적용 | 아니요 |
 
 `scripts/`의 파일과 생성한 `.github/dependabot.yml`은 프로젝트에서 직접 고치지 않는다. 이 저장소에서 고친 뒤 다시 적용한다.
 프로젝트의 `scripts/check_repo_baseline.py`가 복사본이 기록된 해시와 다르면 CI를 실패시킨다.
@@ -34,6 +36,29 @@
 
 5. 두 프롬프트를 같은 채팅에 첨부하고 순서대로 적용한다. [프로젝트 초기 설정과 일상 개발](docs/development-workflow.md)을 프로젝트 작업 문서에 연결하고 스킬의 tracker·도메인 설정(`triage`가 설치돼 있으면 라벨도)까지 확인한다.
 6. 복사 파일 해시 검사와 테스트가 기존 필수 CI job에서 실행되는지 확인한다. [GitHub 설정 기준선과 기능 지원](docs/github-settings-profile.md)의 예외·결과 구분을 따른다.
+7. 필수 CI가 실제 PR에서 성공한 뒤 GitHub 서버 설정을 적용한다(GitHub 설정 프롬프트 §4·§10).
+   1. `templates/repository-settings.json`을 프로젝트의 `.github/repository-settings.json`으로 복사한다.
+   2. `REPLACE`로 시작하는 값과 저장소 정보를 채운다. 남아 있으면 도구가 아무것도 읽지 않고 멈춘다.
+      - `repository`: `owner/name`. `repository_id`: `gh api repos/OWNER/NAME --jq .id`의 값.
+      - `default_branch`와 `expected.repository.default_branch`: 실제 기본 브랜치. 둘이 같아야 한다.
+      - `visibility`: `public` 또는 `private`.
+      - `checks`: 실제 PR에서 성공한 필수 job 이름. GitHub Actions면 `app_id`는 15368이다.
+      - `patterns_allowed`: workflow의 `uses:` 중 GitHub 소유가 아닌 action(`owner/repo@*`). 없으면 빈 목록.
+      - CodeQL을 workflow 파일(advanced setup)로 돌리면 `codeql.state`를 `not-configured`로 바꾸고 `codeql_workflow`·`codeql_main_source`를 넣는다(`POLICY.md` §3).
+      - 비공개 저장소에서 요금제로 쓸 수 없는 기능은 [GitHub 설정 기준선과 기능 지원](docs/github-settings-profile.md)의 예외로 옮긴다.
+   3. `gh auth status`가 저장소 소유자로 로그인된 곳에서, 이 저장소를 기준으로 계획을 본다. 읽기만 한다.
+
+      ```bash
+      python3 tools/apply_github_settings.py /path/to/project
+      ```
+
+   4. `DIFF`(현재 값 → 기준값)와 `PLAN`(쓰기 요청)을 확인하고 승인한 뒤 적용한다. 적용 후 자동으로 다시 감사해 `PASS`나 `LIMITED`를 출력한다.
+
+      ```bash
+      python3 tools/apply_github_settings.py /path/to/project --apply
+      ```
+
+   Grouped security updates는 API가 없어 화면에서 켠다(`POLICY.md` §2).
 
 ## 에이전트에게 보낼 요청문
 
@@ -95,6 +120,8 @@
 
 2. 변경을 PR로 올려 `main`에 병합한 뒤, 최신 `main`을 받아 각 프로젝트에 다시 적용하고 프로젝트별 PR을 올린다. `apply_baseline.py`는 commit하지 않은 변경이 있으면 멈춘다. 병합 전 브랜치에서 적용하면 squash 병합 뒤 `main`에 없는 커밋이 출처로 기록된다.
 3. `CHANGELOG.md`에 바뀐 점과 다시 적용할 프로젝트를 적는다.
+
+이 저장소 자신의 GitHub 설정 기준선은 `.github/repository-settings.json`이다. `python3 tools/apply_github_settings.py .`로 차이를 확인한다.
 
 ## 적용 중인 프로젝트
 

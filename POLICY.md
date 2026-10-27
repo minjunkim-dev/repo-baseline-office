@@ -46,6 +46,7 @@
 
 - 목표값은 `prompts/github-repository-settings.md` §3·§5의 표를 따른다.
 - 각 프로젝트는 기대값을 `.github/repository-settings.json`에 두고 `scripts/check_github_settings.py`로 읽기 전용 감사를 한다.
+- 공통값은 `templates/repository-settings.json`에 있다. 서버 적용은 `tools/apply_github_settings.py`가 같은 기준선으로 계획을 먼저 보이고, 승인 후 `--apply`로 다른 항목만 쓴다.
 - 기능 미지원·비해당은 근거를 기록한 명시적 예외만 허용한다. 형식과 LIMITED·DRIFT·UNVERIFIED 구분은 `docs/github-settings-profile.md`를 따른다. 조회 실패를 자동 예외로 바꾸지 않는다.
 - 개인 계정에는 조직 단위 ruleset이 없다. 서버 설정은 저장소마다 적용하고 감사로 확인한다.
 

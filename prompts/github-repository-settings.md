@@ -51,6 +51,9 @@ GitHub 최종 확인은 두 번째 작업의 마무리다. 세 번째 프롬프�
 | 선형 이력 / 리뷰 대화 해결 | On / On |
 | Force push / 보호 브랜치 삭제 | Off / Off |
 | GitHub 필수 승인 인원 | 0명 |
+| 새 push 때 기존 승인 무효화 / 코드 소유자 리뷰 / 마지막 push 승인 | On / Off / Off |
+| 브랜치 잠금 | Off |
+| Release 불변성(immutable releases) | On |
 
 1인 개발에서 본인 PR에 다른 사람의 승인 1명을 강제하지 마. 승인 0명이어도 한쪽 문과 넓은 영향의 변경은 사람이 최종 커밋을 승인한다.
 기존 협업·release 운영과 충돌하면 근거를 확인해. 다른 목적의 보호를 삭제하거나 보호 공백을 만들지 마.
@@ -119,6 +122,7 @@ Environment는 실제 승인·Secret·배포 경계가 필요할 때만 구성�
 변경 전후를 API 또는 실제 화면으로 기록해. 저장 후 재조회해. 완료 판정은 최신 재조회 결과를 사용해.
 가능하면 기대 기준선과 GET 전용 감사 도구의 요구조건을 인계해. repository ID·owner/name·필수 필드·자료형·실제 체크·publisher를 확인하게 해.
 기준선과 감사 도구 파일의 구현은 PR·CI/CD 작업이 맡는다. 감사 도구는 설정 쓰기를 수행하지 않는다. 설정 적용 작업과 읽기 전용 감사를 구분해.
+서버 적용은 `repo-baseline`의 `tools/apply_github_settings.py`로 해. 기준선은 `templates/repository-settings.json`에서 시작해. 먼저 쓰기 없이 계획을 출력해 변경 전후를 제시하고, 승인 후 `--apply`로 적용해. 필수 체크는 §4로 검증한 것만 기준선에 적어.
 조회 오류·누락을 PASS로 처리하지 마. drift·조회 불가·비해당을 구분해. 기능 미지원은 `repo-baseline`의 `docs/github-settings-profile.md`의 근거 있는 예외로 인계해. 403·404만으로 미지원이라고 판단하지 마. LIMITED는 전체 보호 완료가 아니다.
 기준선 파일은 GitHub 네이티브 자동 적용 파일이 아니다. main의 실제 workflow·설정 파일과 서버 적용을 대조해. 필요하면 Git blob SHA를 확인해.
 기준선이 workflow blob SHA를 고정하면 그 workflow를 바꾸는 PR(Dependabot 포함)은 기준선도 함께 갱신해야 한다. 병합 후 감사에서야 drift를 발견하지 않도록 PR CI의 오프라인 검사를 요구해. 감사 도구는 `repo-baseline`의 `scripts/check_github_settings.py`를 복사해 쓴다.
