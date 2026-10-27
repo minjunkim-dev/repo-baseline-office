@@ -32,7 +32,7 @@
    python3 tools/apply_baseline.py /path/to/project
    ```
 
-5. 두 프롬프트를 같은 채팅에 첨부하고 순서대로 적용한다. [프로젝트 초기 설정과 일상 개발](docs/development-workflow.md)을 프로젝트 작업 문서에 연결하고 스킬의 tracker·라벨·도메인 설정까지 확인한다.
+5. 두 프롬프트를 같은 채팅에 첨부하고 순서대로 적용한다. [프로젝트 초기 설정과 일상 개발](docs/development-workflow.md)을 프로젝트 작업 문서에 연결하고 스킬의 tracker·도메인 설정(`triage`가 설치돼 있으면 라벨도)까지 확인한다.
 6. 복사 파일 해시 검사와 테스트가 기존 필수 CI job에서 실행되는지 확인한다. [GitHub 설정 기준선과 기능 지원](docs/github-settings-profile.md)의 예외·결과 구분을 따른다.
 
 ## 에이전트에게 보낼 요청문
