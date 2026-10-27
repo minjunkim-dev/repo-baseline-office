@@ -4,7 +4,7 @@
 
 - 원본 `repo-baseline`과 같은 변경이다. 개발 절차 문서·PR/CI 셋업 프롬프트·POLICY는 원본과 바이트 단위로 같고, README는 같은 네 문장(일상 개발, 회고, 재적용 순서, 요청문의 외부 리뷰)을 바꿨다.
 - 스킬의 단계는 설치된 원문대로 쓰고 시작점은 `/ask-matt`에 묻는다. 이 저장소에는 스킬이 정하지 않는 선택(`AGENTS.md`만 사용, `main` 경계, 리뷰·회고 정책)만 남긴다.
-- 권한·Secret·workflow·저장소 설정·dependency PR의 추가 리뷰를 "다른 모델"에서 "작성자 세션 밖의 외부 리뷰"로 바꾸고, 공개 저장소는 CodeRabbit 무료 플랜으로 충족한다고 적었다. CodeRabbit은 참고용이며 필수 체크·자동 수정은 쓰지 않는다. GitHub 설정 프롬프트 §7도 CodeRabbit을 정리 대상에서 뺐다.
+- 권한·Secret·workflow·저장소 설정·dependency 정책 PR의 추가 리뷰를 "다른 모델"에서 "작성자 세션 밖의 외부 리뷰"로 바꾸고, 공개 저장소는 CodeRabbit 무료 플랜으로 충족한다고 적었다. CodeRabbit은 참고용이며 필수 체크·자동 수정은 쓰지 않는다. GitHub 설정 프롬프트 §7도 CodeRabbit을 정리 대상에서 뺐다.
 - CodeRabbit 리뷰 반영: 라벨 문서는 `triage`가 설치됐을 때만 완료 조건에 넣는다(셋업 스킬이 그때만 라벨 단계를 진행). Claude Code 플러그인에서는 `/mattpocock-skills:<이름>`처럼 플러그인 이름을 붙여 부른다.
 
 ## 2026-10-27 — 이 저장소에도 Dependabot 버전 업데이트 적용
