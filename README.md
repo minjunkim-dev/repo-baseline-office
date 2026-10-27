@@ -1,6 +1,8 @@
 # repo-baseline-office
 
-`minjunkim-dev/repo-baseline`의 `1ddf420`을 복사한 실험 저장소다. 제품에 다시 적용하는 원본은 그 저장소이고, 이 저장소는 그 기준과 Claude Code 팀 운영을 함께 확인하는 곳이다. `claude-office/`는 제품 복사 manifest에 들어 있지 않다.
+`minjunkim-dev/repo-baseline`의 `1ddf420`을 복사한 후보 저장소다. 지금 정본은 그 저장소다. 이 저장소는 그 기준 위에 Claude Code 팀 운영(`claude-office/`)을 얹어 실제 개발에서 검증하는 곳이고, 검증되면 정본으로 바꾼다. `claude-office/`는 제품 복사 manifest에 들어 있지 않다.
+
+정본으로 바꾸기 전까지 새 프로젝트 셋업과 `tools/apply_baseline.py` 실행은 원본에서 한다. 이 도구는 출처를 원본으로 적으므로, 여기서 실행하면 원본에 없는 커밋이 출처로 기록된다. 정본으로 바꿀 때 `tools/apply_baseline.py`의 출처 이름도 함께 바꾼다. 셋업 문서와 프롬프트는 원본과 같게 유지한다.
 
 아래는 복사해 온 기준이다. 1인 개발 저장소의 GitHub 설정·CI를 같은 결과로 맞춘다.
 
@@ -24,7 +26,7 @@
 1. `templates/repo-baseline.json`을 프로젝트의 `.github/repo-baseline.json`으로 복사한다.
 2. `.github/dependabot.yml` 항목의 `ecosystems`에 GitHub Actions 외의 실제 생태계를 적는다. 예: `{"package-ecosystem": "cargo", "directory": "/services/api"}`.
 3. 테스트를 다른 폴더에서 실행하면 `files`의 대상 경로를 바꾼다. 예: `"scripts/source-only/test_github_settings.py": {"source": "scripts/test_github_settings.py"}`.
-4. 이 저장소에서 다음을 실행한다.
+4. 원본 `repo-baseline`에서 다음을 실행한다. 이 저장소가 정본이 된 뒤에는 이 저장소에서 실행한다.
 
    ```bash
    python3 tools/apply_baseline.py /path/to/project

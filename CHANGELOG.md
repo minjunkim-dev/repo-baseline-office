@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 2026-10-27 — 정본 경계와 제품 관문 보완
+
+- README에 지금 정본은 원본 `repo-baseline`이고 셋업과 `apply_baseline.py` 실행은 원본에서 한다고 적었다. 여기서 실행하면 원본에 없는 커밋이 출처로 기록된다.
+- 관문 테스트 칸이 과제 대상 저장소의 CI 명령을 실행하게 했다. 제품 worktree에는 이 저장소의 `tools/`가 없다.
+- production은 세션에 자격 증명을 두지 않는 것으로 막고, `deploy.py`는 계획 도구임을 적었다.
+- `run_gates.py`가 과제 폴더를 인자로 받는다. 셋업 문서 6단계는 원본과 같게 기존 `CLAUDE.md`를 `AGENTS.md`로 옮기는 문장을 더했다.
+
 ## 2026-10-26 — 사무실 규칙을 AGENTS.md로 전환
 
 - `claude-office/`의 공통 규칙과 역할 규칙을 `CLAUDE.md`에서 `AGENTS.md`로 옮겼다. 초기 설정도 스킬 블록을 `AGENTS.md`에 둔다.

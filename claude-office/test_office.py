@@ -28,6 +28,14 @@ class OfficeBoundaryTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout.strip(), "plan only: staging")
 
+    def test_gate_runner_needs_a_task_with_intent(self):
+        result = subprocess.run(
+            [sys.executable, str(OFFICE / "tools/run_gates.py"), str(OFFICE / "leader")],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse((OFFICE / "leader/REPORT.md").exists())
+
     def test_copied_manifest_excludes_the_office(self):
         manifest = (ROOT / "templates/repo-baseline.json").read_text(encoding="utf-8")
         self.assertNotIn("claude-office", manifest)
