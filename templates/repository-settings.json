@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "repository": "OWNER/NAME",
+  "repository": "REPLACE-OWNER/NAME",
   "repository_id": 0,
   "default_branch": "main",
   "expected": {
     "repository": {
       "default_branch": "main",
-      "visibility": "public",
+      "visibility": "REPLACE: public or private",
       "allow_merge_commit": false,
       "allow_rebase_merge": false,
       "allow_squash_merge": true,
@@ -32,7 +32,7 @@
         "strict": true,
         "checks": [
           {
-            "context": "REPLACE: required CI name verified on a real PR",
+            "context": "REPLACE: a required CI job name that succeeded on a real PR",
             "app_id": 15368
           }
         ]
@@ -71,7 +71,9 @@
     "allowed_actions": {
       "github_owned_allowed": true,
       "verified_allowed": false,
-      "patterns_allowed": []
+      "patterns_allowed": [
+        "REPLACE: each non-GitHub action the workflows use, as owner/repo@*, or leave the list empty"
+      ]
     },
     "workflow_token": {
       "default_workflow_permissions": "read",

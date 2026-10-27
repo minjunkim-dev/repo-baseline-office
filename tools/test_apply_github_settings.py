@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -18,22 +19,25 @@ import check_github_settings as checker  # noqa: E402
 from test_github_settings import BASELINE  # noqa: E402
 
 PREFIX = f"repos/{BASELINE['repository']}"
+PROTECTION = "branches/main/protection"
 
 
-def missing(path):
-    return subprocess.CalledProcessError(1, ["gh", "api", path], stderr="gh: Not Found (HTTP 404)")
+def http_error(path, status):
+    return subprocess.CalledProcessError(1, ["gh", "api", path], stderr=f"gh: error (HTTP {status})")
 
 
 class FakeGitHub:
     """Stores settings in GET shape and applies writes the way GitHub reports them back."""
 
-    def __init__(self, profile, fresh=False):
+    def __init__(self, profile=BASELINE, fresh=False):
         expected = copy.deepcopy(profile["expected"])
         self.metadata = {"id": profile["repository_id"], "full_name": profile["repository"], **expected["repository"]}
         self.state = {tool.endpoint(name, profile["default_branch"]): value
                       for name, value in expected.items() if name not in ("repository", "dependabot_alerts")}
+        self.state[PROTECTION] = self.protection_view(self.state[PROTECTION])
         self.alerts = expected["dependabot_alerts"]["enabled"]
-        self.writes = []
+        self.codeql_pending = 0  # reads that still report the old state after a PATCH
+        self.writes, self.fail_on = [], None
         if fresh:  # what a new repository answers before any setup
             self.metadata.update(allow_merge_commit=True, allow_rebase_merge=True, allow_auto_merge=False,
                                  delete_branch_on_merge=False, allow_update_branch=False,
@@ -43,15 +47,21 @@ class FakeGitHub:
                 key: {"status": "disabled"} for key in self.metadata["security_and_analysis"]}
             self.alerts = False
             self.state.update({
-                "branches/main/protection": None,
+                PROTECTION: None,
                 "actions/permissions": {"enabled": True, "allowed_actions": "all", "sha_pinning_required": False},
-                "actions/permissions/selected-actions": None,
                 "actions/permissions/workflow": {"default_workflow_permissions": "write",
                                                  "can_approve_pull_request_reviews": True},
                 "actions/permissions/fork-pr-contributor-approval": {"approval_policy": "first_time_contributors"},
                 "immutable-releases": {"enabled": False, "enforced_by_owner": False},
                 "code-scanning/default-setup": {"state": "not-configured"},
             })
+
+    @staticmethod
+    def protection_view(expected):
+        view = copy.deepcopy(expected)
+        view.update({key: {"enabled": False} for key in tool.UNMANAGED_PROTECTION})
+        view["restrictions"] = None
+        return view
 
     def read(self, path):
         rel = path.removeprefix(PREFIX).lstrip("/")
@@ -60,19 +70,27 @@ class FakeGitHub:
         if rel == "vulnerability-alerts":
             if self.alerts:
                 return None
-            raise missing(path)
+            raise http_error(path, 404)
+        if rel == "actions/permissions/selected-actions" and self.state["actions/permissions"]["allowed_actions"] != "selected":
+            raise http_error(path, 409)
+        if rel == "code-scanning/default-setup" and self.codeql_pending:
+            self.codeql_pending -= 1
+            return {"state": "not-configured"}
         if self.state.get(rel) is None:
-            raise missing(path)
+            raise http_error(path, 404)
         return copy.deepcopy(self.state[rel])
 
     def write(self, method, path, body):
         rel = path.removeprefix(PREFIX).lstrip("/")
+        if rel == self.fail_on:
+            raise http_error(path, 403)
         self.writes.append((method, rel))
         on = method == "PUT"
         if rel == "":
+            body = copy.deepcopy(body)
             security = body.pop("security_and_analysis", {})
             self.metadata.update(body)
-            self.metadata["security_and_analysis"].update(copy.deepcopy(security))
+            self.metadata["security_and_analysis"].update(security)
         elif rel == "automated-security-fixes":
             self.metadata["security_and_analysis"]["dependabot_security_updates"] = {
                 "status": "enabled" if on else "disabled"}
@@ -82,116 +100,201 @@ class FakeGitHub:
             self.state[rel] = {"enabled": on, "enforced_by_owner": False}
         elif rel == "code-scanning/default-setup":
             self.state[rel] = {"state": body["state"], "languages": ["python"]}
-        elif rel.endswith("/protection"):
-            self.assertion_restrictions = body["restrictions"]
-            self.state[rel] = {
-                "url": "https://api.github.invalid",
-                "required_status_checks": {**body["required_status_checks"], "contexts": [
-                    check["context"] for check in body["required_status_checks"]["checks"]]},
+        elif rel == PROTECTION:
+            self.state[rel] = self.protection_view({
+                "required_status_checks": dict(body["required_status_checks"]),
                 "enforce_admins": {"enabled": body["enforce_admins"]},
                 "required_pull_request_reviews": dict(body["required_pull_request_reviews"]),
                 **{flag: {"enabled": body[flag]} for flag in tool.PROTECTION_FLAGS},
-            }
+            })
         else:
             self.state[rel] = copy.deepcopy(body)
 
 
-def run(argv, server):
-    stdout, stderr = io.StringIO(), io.StringIO()
-    with redirect_stdout(stdout), redirect_stderr(stderr):
-        code = tool.main(argv, read=server.read, write=server.write)
-    return code, stdout.getvalue(), stderr.getvalue()
-
-
 class ApplyGitHubSettingsTests(unittest.TestCase):
-    def project(self, profile):
+    def project(self, profile=BASELINE):
         folder = tempfile.TemporaryDirectory()
         self.addCleanup(folder.cleanup)
         (Path(folder.name) / ".github").mkdir()
         (Path(folder.name) / tool.PROFILE).write_text(json.dumps(profile))
         return folder.name
 
-    def test_matching_settings_need_no_writes(self):
-        server = FakeGitHub(BASELINE)
-        code, out, _ = run(["tool", self.project(BASELINE)], server)
-        self.assertEqual((code, server.writes), (0, []))
-        self.assertIn("No writes needed", out)
+    def run_tool(self, server, profile=BASELINE, apply=False):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        argv = ["tool", self.project(profile)] + (["--apply"] if apply else [])
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            code = tool.main(argv, read=server.read, write=server.write, sleep=lambda seconds: None)
+        return code, stdout.getvalue(), stderr.getvalue()
 
-    def test_plan_never_writes(self):
-        server = FakeGitHub(BASELINE, fresh=True)
-        code, out, _ = run(["tool", self.project(BASELINE)], server)
-        self.assertEqual((code, server.writes), (1, []))
+    def test_matching_settings_need_no_writes(self):
+        server = FakeGitHub()
+        code, out, _ = self.run_tool(server, apply=True)
+        self.assertEqual((code, server.writes), (0, []))
+        self.assertIn("PASS:", out)
+
+    def test_plan_shows_current_and_baseline_values_and_only_reads(self):
+        server = FakeGitHub(fresh=True)
+        commands = []
+        def gh(command, **kwargs):
+            commands.append(command)
+            try:
+                data = server.read(command[4])
+            except subprocess.CalledProcessError as error:
+                if kwargs.get("check"):
+                    raise
+                return subprocess.CompletedProcess(command, 1, "", error.stderr)
+            return subprocess.CompletedProcess(command, 0, "" if data is None else json.dumps(data), "")
+        stdout = io.StringIO()
+        with patch.object(subprocess, "run", gh), redirect_stdout(stdout):
+            code = tool.main(["tool", self.project()])
+        out = stdout.getvalue()
+        self.assertEqual(code, 1)
+        self.assertEqual({command[3] for command in commands}, {"GET"})
+        self.assertIn('DIFF: repository.allow_merge_commit: true -> false', out)
+        self.assertIn('DIFF: protection: "<not set>" -> ', out)
         self.assertIn("PLAN: PUT repos/owner/repo/branches/main/protection", out)
 
+    def test_protection_request_body(self):
+        expected = BASELINE["expected"]["protection"]
+        [(method, path, body)] = tool.writes_for("protection", expected, PREFIX, "main")
+        self.assertEqual((method, path), ("PUT", f"{PREFIX}/{PROTECTION}"))
+        self.assertEqual(body, {
+            "required_status_checks": {"strict": True, "checks": [{"context": "CI", "app_id": 15368}]},
+            "enforce_admins": True,
+            "required_pull_request_reviews": {"required_approving_review_count": 0, "dismiss_stale_reviews": True,
+                                              "require_code_owner_reviews": False, "require_last_push_approval": False},
+            "restrictions": None, "required_linear_history": True, "allow_force_pushes": False,
+            "allow_deletions": False, "required_conversation_resolution": True, "lock_branch": False,
+        })
+
     def test_fresh_repository_reaches_baseline_and_audit_passes(self):
-        server = FakeGitHub(BASELINE, fresh=True)
-        code, out, err = run(["tool", self.project(BASELINE), "--apply"], server)
+        server = FakeGitHub(fresh=True)
+        server.codeql_pending = 3  # default setup turns on in the background
+        code, out, err = self.run_tool(server, apply=True)
         self.assertEqual(code, 0, out + err)
         self.assertIn("PASS:", out)
         self.assertEqual(checker.audit(BASELINE, server.read), [])
-        self.assertIsNone(server.assertion_restrictions)
         order = [rel for _, rel in server.writes]
         self.assertLess(order.index("vulnerability-alerts"), order.index("automated-security-fixes"))
         self.assertLess(order.index("actions/permissions"), order.index("actions/permissions/selected-actions"))
         self.assertEqual(tool.plan(BASELINE, server.read), ([], []))  # a second run changes nothing
 
-    def test_visibility_default_branch_and_rulesets_are_left_to_a_person(self):
-        server = FakeGitHub(BASELINE)
+    def test_switching_features_off_uses_delete(self):
+        profile = copy.deepcopy(BASELINE)
+        profile["expected"]["immutable_releases"]["enabled"] = False
+        profile["expected"]["repository"]["security_and_analysis"]["dependabot_security_updates"]["status"] = "disabled"
+        server = FakeGitHub()
+        self.assertEqual(self.run_tool(server, profile, apply=True)[0], 0)
+        self.assertEqual(sorted(server.writes), sorted([
+            ("PATCH", ""), ("DELETE", "automated-security-fixes"),
+            ("DELETE", "immutable-releases")]))
+
+    def test_visibility_and_rulesets_are_left_to_a_person(self):
+        server = FakeGitHub()
         server.metadata["visibility"] = "public"
         server.state["rulesets"] = [{"id": 1, "name": "team rule"}]
-        code, out, _ = run(["tool", self.project(BASELINE), "--apply"], server)
+        code, out, _ = self.run_tool(server, apply=True)
         self.assertEqual((code, server.writes), (1, []))
         self.assertIn("MANUAL: repository.visibility", out)
         self.assertIn("MANUAL: rulesets", out)
 
-    def test_identity_mismatch_and_read_errors_write_nothing(self):
-        other = copy.deepcopy(BASELINE)
-        other["repository_id"] = 99
-        server = FakeGitHub(BASELINE, fresh=True)
-        self.assertEqual(run(["tool", self.project(other), "--apply"], server)[0], 2)
+    def test_protection_with_unmanaged_settings_is_left_to_a_person(self):
+        server = FakeGitHub()
+        server.state[PROTECTION]["required_signatures"] = {"enabled": True}
+        server.state[PROTECTION]["required_status_checks"]["checks"] = [{"context": "old", "app_id": 15368}]
+        code, out, _ = self.run_tool(server, apply=True)
+        self.assertEqual(code, 1)
+        self.assertNotIn(("PUT", PROTECTION), server.writes)
+        self.assertIn("MANUAL: protection.required_signatures is on", out)
+
+    def test_bad_profiles_and_read_errors_write_nothing(self):
+        cases = {
+            "identity": lambda p: p.update(repository_id=99),
+            "schema": lambda p: p.update(schema_version=99),
+            "branch path": lambda p: p.update(default_branch="x/../../other/repo/branches/main"),
+            "branch pair": lambda p: p.update(default_branch="dev"),
+            "placeholder": lambda p: p["expected"]["protection"]["required_status_checks"]["checks"][0].update(
+                context="REPLACE: a required CI job name"),
+        }
+        for name, change in cases.items():
+            with self.subTest(name):
+                profile = copy.deepcopy(BASELINE)
+                change(profile)
+                server = FakeGitHub(fresh=True)
+                code, _, err = self.run_tool(server, profile, apply=True)
+                self.assertEqual((code, server.writes), (2, []), err)
+        server = FakeGitHub(fresh=True)
+        server.metadata["default_branch"] = "trunk"
+        self.assertEqual(self.run_tool(server, apply=True)[0], 2)
+        server = FakeGitHub(fresh=True)
         allowed = server.read
         def forbidden(path):
             if path.endswith("actions/permissions"):
-                raise subprocess.CalledProcessError(1, ["gh"], stderr="gh: Forbidden (HTTP 403)")
+                raise http_error(path, 403)
             return allowed(path)
         server.read = forbidden
-        self.assertEqual(run(["tool", self.project(BASELINE), "--apply"], server)[0], 2)
+        self.assertEqual(self.run_tool(server, apply=True)[0], 2)
         self.assertEqual(server.writes, [])
+
+    def test_failed_write_stops_and_lists_what_was_written(self):
+        server = FakeGitHub(fresh=True)
+        server.fail_on = PROTECTION
+        code, _, err = self.run_tool(server, apply=True)
+        self.assertEqual(code, 2)
+        self.assertIn("Already written: PUT repos/owner/repo/vulnerability-alerts", err)
+        self.assertNotIn("actions/permissions", [rel for _, rel in server.writes])
 
     def test_declared_exceptions_are_never_written(self):
         profile = copy.deepcopy(BASELINE)
         del profile["expected"]["immutable_releases"]
-        profile["exceptions"] = {"immutable_releases": {
-            "status": "unsupported", "reason": "test", "evidence": "test"}}
-        server = FakeGitHub(BASELINE, fresh=True)
-        code, out, _ = run(["tool", self.project(profile), "--apply"], server)
-        self.assertNotIn(("PUT", "immutable-releases"), server.writes)
+        del profile["expected"]["repository"]["security_and_analysis"]["secret_scanning"]["status"]
+        del profile["expected"]["repository"]["security_and_analysis"]["dependabot_security_updates"]["status"]
+        evidence = {"status": "unsupported", "reason": "test", "evidence": "test"}
+        profile["exceptions"] = {path: evidence for path in (
+            "immutable_releases", "repository.security_and_analysis.secret_scanning.status",
+            "repository.security_and_analysis.dependabot_security_updates.status")}
+        server = FakeGitHub(fresh=True)
+        code, out, err = self.run_tool(server, profile, apply=True)
+        self.assertEqual(code, 0, out + err)
+        self.assertIn("LIMITED:", out)
         self.assertIn("SKIPPED: immutable_releases", out)
+        written = [rel for _, rel in server.writes]
+        self.assertNotIn("immutable-releases", written)
+        self.assertNotIn("automated-security-fixes", written)
+        self.assertEqual(server.metadata["security_and_analysis"]["secret_scanning"], {"status": "disabled"})
 
     def test_reads_the_same_paths_as_the_checker(self):
-        for fresh in (False, True):
-            server, paths = FakeGitHub(BASELINE, fresh), {"checker": set(), "tool": set()}
-            def recorder(key):
-                def read(path):
-                    paths[key].add(path)
-                    return server.read(path)
-                return read
-            try:
-                checker.audit(BASELINE, recorder("checker"))
-            except subprocess.CalledProcessError:
-                continue  # the checker stops at the first missing control; compare the settled case
-            tool.plan(BASELINE, recorder("tool"))
-            self.assertEqual(paths["tool"], paths["checker"])
+        server, paths = FakeGitHub(), {"checker": set(), "tool": set()}
+        def recorder(key):
+            def read(path):
+                paths[key].add(path)
+                return server.read(path)
+            return read
+        checker.audit(BASELINE, recorder("checker"))
+        tool.plan(BASELINE, recorder("tool"))
+        self.assertEqual(paths["tool"], paths["checker"])
+
+    def test_profile_must_be_a_regular_file_in_the_project(self):
+        project = Path(self.project())
+        outside = project.parent / f"{project.name}-outside.json"
+        outside.write_text(json.dumps(BASELINE))
+        self.addCleanup(outside.unlink)
+        (project / tool.PROFILE).unlink()
+        (project / tool.PROFILE).symlink_to(outside)
+        with self.assertRaises(ValueError):
+            tool.load(project)
 
     def test_template_and_own_profiles_share_the_policy_values(self):
         template = json.loads((ROOT / "templates/repository-settings.json").read_text(encoding="utf-8"))
-        with self.assertRaises(ValueError):  # unusable until the project fills in its identity
-            checker.validate_profile(template)
+        project = Path(self.project(template))
+        with self.assertRaisesRegex(ValueError, "REPLACE|template"):
+            tool.load(project)
         own = json.loads((ROOT / ".github/repository-settings.json").read_text(encoding="utf-8"))
         checker.validate_profile(own)
-        for profile in (template, own):  # identity and verified checks are per project
+        for profile in (template, own):  # identity, verified checks and third-party actions are per project
             del profile["expected"]["repository"]["visibility"]
             del profile["expected"]["protection"]["required_status_checks"]["checks"]
+            del profile["expected"]["allowed_actions"]["patterns_allowed"]
         self.assertEqual(template["expected"], own["expected"])
 
 

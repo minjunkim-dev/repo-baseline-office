@@ -2,9 +2,10 @@
 
 ## 2026-10-27 — GitHub 설정 적용 도구
 
-- `tools/apply_github_settings.py`를 추가했다. 프로젝트의 `.github/repository-settings.json`(감사 도구와 같은 기준선)을 읽어 다른 항목만 쓴다. 기본 실행은 계획만 출력하고, `--apply`는 쓴 뒤 다시 감사한다. 공개 여부·기본 브랜치·ruleset·workflow 파일은 쓰지 않는다. 404만 "아직 설정 안 됨"으로 보고 다른 조회 오류는 실패로 끝낸다.
-- 새 프로젝트의 기준선 시작점 `templates/repository-settings.json`과 이 저장소 자신의 `.github/repository-settings.json`을 두었다. 정책 값이 서로 어긋나면 `tools` 테스트가 실패한다.
-- 공통 검사기(`scripts/`)는 바뀌지 않아 소비 프로젝트 재적용은 필요 없다. 각 프로젝트는 기준선을 채운 뒤 이 도구로 계획을 확인하고 적용할 수 있다.
+- `tools/apply_github_settings.py`를 추가했다. 프로젝트의 `.github/repository-settings.json`(감사 도구와 같은 기준선)을 읽어 다른 항목만 쓴다. 기본 실행은 현재 값과 기준값, 쓰기 요청을 출력만 하고, `--apply`는 쓴 뒤 다시 감사한다. 공개 여부·ruleset·workflow 파일과, 기준선 밖 설정이 켜진 브랜치 보호는 쓰지 않는다. 기준선 오류와 404 외의 조회 오류는 쓰기 전에 멈춘다.
+- 새 프로젝트의 기준선 시작점 `templates/repository-settings.json`(채울 값은 `REPLACE`로 표시)과 이 저장소 자신의 `.github/repository-settings.json`을 두었다. 정책 값이 서로 어긋나면 `tools` 테스트가 실패한다.
+- GitHub 설정 프롬프트 §3 표에 기준선이 이미 쓰던 값(기존 승인 무효화 On, 코드 소유자 리뷰 Off, 마지막 push 승인 Off, 브랜치 잠금 Off, Release 불변성 On)을 적었다.
+- `scripts/check_github_settings.py`의 schema·저장소 이름·브랜치 검사를 `validate_target()`으로 분리했다. 동작은 같아 소비 프로젝트 재적용은 필요 없다. 다음에 다시 맞출 때 함께 복사된다.
 
 ## 2026-10-27 — Matt Pocock 스킬 사용법을 다시 적지 않음 (원본과 같게)
 
