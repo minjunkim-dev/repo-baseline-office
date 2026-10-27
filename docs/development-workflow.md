@@ -20,5 +20,5 @@
 이 기준이 스킬에 더하는 것은 `main`에 들어가는 경계뿐이다.
 
 - 모든 변경은 PR로 `main`에 들어가고 필수 CI가 통과해야 한다. 병합은 위험별로 한다. 위험이 낮고 되돌리기 쉬운 양쪽 문은 맡은 에이전트가 병합할 수 있고, 한쪽 문·넓은 영향·위험 변경은 사람이 최종 head를 승인한다(셋업 프롬프트 §10).
-- 리뷰·수정·병합 위험 판단은 셋업 프롬프트 §5와 `POLICY.md` §5를 따른다. 권한·Secret·workflow·저장소 설정·dependency를 바꾸는 PR에는 Security 리뷰와 `POLICY.md` §5의 외부 리뷰(공개 저장소는 CodeRabbit)를 더한다.
+- 리뷰·수정·병합 위험 판단은 셋업 프롬프트 §5와 `POLICY.md` §5를 따른다. 권한·Secret·workflow·저장소 설정·dependency 정책을 바꾸는 PR에는 Security 리뷰와 `POLICY.md` §5의 외부 리뷰(공개 저장소는 CodeRabbit)를 더한다.
 - 에이전트 환경 개선은 사용자가 대상을 지정할 때 `/retro`로 한다(`POLICY.md` §6).
