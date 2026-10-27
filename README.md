@@ -44,6 +44,7 @@
       - `visibility`: `public` 또는 `private`.
       - `checks`: 실제 PR에서 성공한 필수 job 이름. GitHub Actions면 `app_id`는 15368이다.
       - `patterns_allowed`: workflow의 `uses:` 중 GitHub 소유가 아닌 action(`owner/repo@*`). 없으면 빈 목록.
+      - CodeQL을 workflow 파일(advanced setup)로 돌리면 `codeql.state`를 `not-configured`로 바꾸고 `codeql_workflow`·`codeql_main_source`를 넣는다(`POLICY.md` §3).
       - 비공개 저장소에서 요금제로 쓸 수 없는 기능은 [GitHub 설정 기준선과 기능 지원](docs/github-settings-profile.md)의 예외로 옮긴다.
    3. `gh auth status`가 저장소 소유자로 로그인된 곳에서, 이 저장소를 기준으로 계획을 본다. 읽기만 한다.
 

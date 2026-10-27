@@ -205,7 +205,57 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
         code, out, _ = self.run_tool(server, apply=True)
         self.assertEqual(code, 1)
         self.assertNotIn(("PUT", PROTECTION), server.writes)
-        self.assertIn("MANUAL: protection.required_signatures is on", out)
+        self.assertIn("MANUAL: protection.required_signatures is set", out)
+
+    def test_review_bypass_and_dismissal_lists_are_left_to_a_person(self):
+        for key, value in (("bypass_pull_request_allowances", {"users": [{"login": "bot"}], "teams": [], "apps": []}),
+                           ("dismissal_restrictions", {"users": [{"login": "lead"}], "teams": []})):
+            with self.subTest(key):
+                server = FakeGitHub()
+                server.state[PROTECTION]["required_pull_request_reviews"][key] = value
+                server.state[PROTECTION]["required_linear_history"] = {"enabled": False}
+                code, out, _ = self.run_tool(server, apply=True)
+                self.assertNotIn(("PUT", PROTECTION), server.writes)
+                self.assertIn(f"MANUAL: protection.required_pull_request_reviews.{key} is set", out)
+
+    def test_advanced_codeql_keeps_default_setup_until_the_workflow_is_active(self):
+        profile = copy.deepcopy(BASELINE)
+        workflow = ".github/workflows/codeql.yml"
+        profile["expected"]["codeql"] = {"state": "not-configured"}
+        profile["expected"]["codeql_workflow"] = {"path": workflow, "state": "active"}
+        profile["expected"]["codeql_main_source"] = {"path": workflow, "type": "file", "sha": "0" * 40}
+        server = FakeGitHub()
+        server.state["code-scanning/default-setup"] = {"state": "configured"}
+        code, out, _ = self.run_tool(server, profile, apply=True)
+        self.assertNotEqual(code, 0)  # the audit cannot verify a workflow that does not exist yet
+        self.assertNotIn(("PATCH", "code-scanning/default-setup"), server.writes)
+        self.assertIn("MANUAL: codeql.state: default setup stays on", out)
+        server.state["actions/workflows/codeql.yml"] = {"path": workflow, "state": "active"}
+        self.run_tool(server, profile, apply=True)
+        self.assertIn(("PATCH", "code-scanning/default-setup"), server.writes)
+
+    def test_fields_the_auditor_does_not_require_are_not_written(self):
+        profile = copy.deepcopy(BASELINE)
+        profile["expected"]["repository"]["has_wiki"] = False
+        profile["expected"]["workflow_token"]["extra"] = True
+        server = FakeGitHub()
+        server.metadata["has_wiki"] = True
+        server.state["actions/permissions/workflow"]["default_workflow_permissions"] = "write"
+        code, out, _ = self.run_tool(server, profile, apply=True)
+        self.assertIn("MANUAL: repository.has_wiki differs", out)
+        self.assertNotIn(("PATCH", ""), server.writes)
+        self.assertEqual(server.state["actions/permissions/workflow"],
+                         {"default_workflow_permissions": "read", "can_approve_pull_request_reviews": False})
+
+    def test_a_write_with_unknown_outcome_is_reported(self):
+        server = FakeGitHub(fresh=True)
+        def timeout(method, path, body):
+            raise subprocess.TimeoutExpired(["gh"], 60, stderr=b"timed out")
+        server.write = timeout
+        code, _, err = self.run_tool(server, apply=True)
+        self.assertEqual(code, 2)
+        self.assertIn("FAILED: timed out", err)
+        self.assertIn("Outcome unknown: PUT repos/owner/repo/vulnerability-alerts", err)
 
     def test_bad_profiles_and_read_errors_write_nothing(self):
         cases = {

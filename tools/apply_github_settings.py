@@ -11,9 +11,11 @@ audits. A control is written whole, so one differing field resends its other
 baseline fields too. A failed write stops the run; rerun the plan to see where
 the repository stands.
 
-It never changes visibility, rulesets, workflow files, or branch protection that
-carries settings the baseline does not manage (signed commits, push restrictions,
-blocked creations, fork syncing); those are printed as MANUAL. Declared exceptions
+It never changes visibility, rulesets, workflow files, fields the auditor does not
+require, or branch protection that carries settings the baseline does not manage
+(signed commits, push restrictions, blocked creations, fork syncing, review bypass
+or dismissal lists); those are printed as MANUAL. Under an advanced CodeQL baseline
+it keeps default setup on until the CodeQL workflow is active. Declared exceptions
 are never written. Unfilled template values ("REPLACE...") stop it before any read.
 """
 
@@ -103,6 +105,25 @@ def value_at(data, path):
     return data
 
 
+def managed(name, path):
+    """Whether a drifted path is one of the audited fields this tool writes."""
+    fields = [f"{name}.{field}" for field in checker.REQUIRED_FIELDS[name].split()] or [name]
+    return any(path == field or field.startswith(path + ".") or path.startswith(field + ".") for field in fields)
+
+
+def unmanaged_protection(actual):
+    """Protection settings the baseline does not record; a PUT would reset any that are set."""
+    kept = [key for key in UNMANAGED_PROTECTION if (actual.get(key) or {}).get("enabled")]
+    kept += ["restrictions"] if actual.get("restrictions") else []
+    reviews = actual.get("required_pull_request_reviews") or {}
+    bypass = reviews.get("bypass_pull_request_allowances") or {}
+    if any(bypass.get(kind) for kind in ("users", "teams", "apps")):
+        kept.append("required_pull_request_reviews.bypass_pull_request_allowances")
+    if reviews.get("dismissal_restrictions"):
+        kept.append("required_pull_request_reviews.dismissal_restrictions")
+    return kept
+
+
 def writes_for(name, expected, prefix, branch):
     """GitHub write requests that turn the expected GET shape into server state."""
     toggle = lambda on: "PUT" if on else "DELETE"  # noqa: E731
@@ -132,7 +153,8 @@ def writes_for(name, expected, prefix, branch):
         return [(toggle(expected["enabled"]), f"{prefix}/{endpoint(name, branch)}", None)]
     if name == "codeql":
         return [("PATCH", f"{prefix}/{endpoint(name, branch)}", {"state": expected["state"]})]
-    return [("PUT", f"{prefix}/{endpoint(name, branch)}", expected)]
+    fields = checker.REQUIRED_FIELDS[name].split()
+    return [("PUT", f"{prefix}/{endpoint(name, branch)}", {key: expected[key] for key in fields if key in expected})]
 
 
 def plan(profile, read=None):
@@ -171,11 +193,21 @@ def plan(profile, read=None):
             drift.remove("repository.visibility")
             if not drift:
                 continue
+        unmanaged = [path for path in drift if not managed(name, path)]
+        if unmanaged:
+            manual.extend(f"{path} differs; this tool only writes the audited fields" for path in unmanaged)
+            drift = [path for path in drift if path not in unmanaged]
+            if not drift:
+                continue
         if name == "protection" and actual is not None:
-            kept = [key for key in UNMANAGED_PROTECTION if (actual.get(key) or {}).get("enabled")]
-            kept += ["restrictions"] if actual.get("restrictions") else []
+            kept = unmanaged_protection(actual)
             if kept:
-                manual.extend(f"protection.{key} is on; writing protection would reset it" for key in kept)
+                manual.extend(f"protection.{key} is set; writing protection would reset it" for key in kept)
+                continue
+        if name == "codeql" and expected[name]["state"] == "not-configured" and "codeql_workflow" in expected:
+            workflow, _ = get(read, f"{prefix}/{endpoint('codeql_workflow', branch)}")
+            if checker.differences(expected["codeql_workflow"], workflow, "codeql_workflow"):
+                manual.append("codeql.state: default setup stays on until the advanced workflow is active")
                 continue
         shown = [(path, value_at(actual, path), value_at(expected[name], path)) for path in drift]
         changes.append((shown, writes_for(name, expected[name], prefix, branch)))
@@ -204,7 +236,7 @@ def main(argv, read=None, write=write_api, sleep=time.sleep):
         return 2
     apply = len(argv) == 3
     read = checker.read_api if read is None else read
-    done = []
+    done, attempt = [], None
     try:
         profile = load(Path(argv[1]))
         changes, manual = plan(profile, read)
@@ -214,8 +246,10 @@ def main(argv, read=None, write=write_api, sleep=time.sleep):
             for method, path, body in requests:
                 print(f"{'APPLY' if apply else 'PLAN'}: {method} {path}" + ("" if body is None else " " + json.dumps(body, sort_keys=True)))
                 if apply:
+                    attempt = f"{method} {path}"
                     write(method, path, body)
-                    done.append(f"{method} {path}")
+                    done.append(attempt)
+                    attempt = None
         for line in manual:
             print(f"MANUAL: {line}")
         for path in sorted(profile.get("exceptions", {})):
@@ -228,10 +262,14 @@ def main(argv, read=None, write=write_api, sleep=time.sleep):
         drift = checker.audit(profile, read)
     except (ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError) as error:
         stderr = getattr(error, "stderr", None)
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", "replace")
         detail = stderr.strip().splitlines()[-1] if stderr and stderr.strip() else f"{type(error).__name__}: {error}"
         print(f"FAILED: {detail}", file=sys.stderr)
         if done:
             print("Already written: " + ", ".join(done) + ". Run the plan again before retrying.", file=sys.stderr)
+        if attempt:
+            print(f"Outcome unknown: {attempt}. Run the plan again to see whether it took effect.", file=sys.stderr)
         return 2
     if drift:
         print("DRIFT after apply: " + ", ".join(drift))
