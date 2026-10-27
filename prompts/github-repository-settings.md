@@ -103,7 +103,8 @@ advanced setup에서 `github/codeql-action/*`을 SHA로 고정하면 모든 단�
 
 별도 컨텍스트의 자체 리뷰를 기본으로 해. 실제 PR diff·코딩 규칙·확정 완료 조건으로 리뷰하고, 확실한 결함은 수정·커밋하는 절차를 PR·CI/CD 작업에 인계해.
 기존 외부 리뷰 서비스·App·workflow가 있으면 대상 저장소에서 사용하는 기능과 필수 체크 의존성을 확인해. 불필요한 연결의 정리는 영향 범위를 제시하고 승인된 범위에서 수행해. 공유 App의 다른 저장소 접근과 로컬 Git·에이전트 사용을 보존해.
-workflow·스크립트 변경은 PR·CI/CD 작업에 인계해. 결정적인 보안·dependency 검사와 로컬 독립 리뷰를 유지해. 새 리뷰 서비스를 연결하거나 유료 기능을 켜지 마.
+workflow·스크립트 변경은 PR·CI/CD 작업에 인계해. 결정적인 보안·dependency 검사와 로컬 독립 리뷰를 유지해.
+공개 저장소는 CodeRabbit 무료 플랜 GitHub App을 `POLICY.md` §5의 외부 리뷰로 쓴다. 이 연결은 정리 대상이 아니다. 설치는 사람이 승인하고, 필수 체크·Autofix·유료 기능은 켜지 마. 그 밖의 새 리뷰 서비스를 연결하거나 유료 기능을 켜지 마.
 Copilot을 리뷰 경로로 사용하지 않으면 MCP tools Off·PR 승인 Off·자동 리뷰 ruleset 없음으로 유지해.
 
 ## 8. 배포 승인·Environment 기준
