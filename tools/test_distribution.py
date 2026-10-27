@@ -21,6 +21,11 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
         return result.stdout
 
+    def test_own_dependabot_config_matches_the_template(self):
+        own = (ROOT / ".github/dependabot.yml").read_text(encoding="utf-8").splitlines()
+        template = (ROOT / "templates/dependabot.yml").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(own[1:], template[1:])
+
     def test_fresh_install_copied_tests_provenance_drift_and_repair(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

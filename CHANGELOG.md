@@ -1,5 +1,10 @@
 # 변경 기록
 
+## 2026-10-27 — 이 저장소에도 Dependabot 버전 업데이트 적용
+
+- `.github/dependabot.yml`을 두었다. 생태계가 GitHub Actions뿐이라 `templates/dependabot.yml`을 그대로 쓴다. SHA로 고정한 `check.yml`의 action은 보안 알림이 생기지 않으므로 이 정기 업데이트로만 갱신된다(`POLICY.md` §2).
+- 이 저장소에는 manifest가 없어 `apply_baseline.py`로 생성하지 않는다. 첫 줄을 사본이라는 설명으로 바꾸고, 나머지가 템플릿과 어긋나면 `tools` 테스트가 실패하게 했다.
+
 ## 2026-10-27 — 정본 경계와 제품 관문 보완
 
 - README에 지금 정본은 원본 `repo-baseline`이고 셋업과 `apply_baseline.py` 실행은 원본에서 한다고 적었다. 여기서 실행하면 원본에 없는 커밋이 출처로 기록된다.
