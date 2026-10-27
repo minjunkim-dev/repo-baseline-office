@@ -159,7 +159,8 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
         self.assertIn("PLAN: PUT repos/owner/repo/branches/main/protection", out)
 
     def test_protection_request_body(self):
-        expected = BASELINE["expected"]["protection"]
+        expected = copy.deepcopy(BASELINE["expected"]["protection"])
+        expected["required_pull_request_reviews"]["dismissal_restrictions"] = {"users": [{"login": "lead"}]}
         [(method, path, body)] = tool.writes_for("protection", expected, PREFIX, "main")
         self.assertEqual((method, path), ("PUT", f"{PREFIX}/{PROTECTION}"))
         self.assertEqual(body, {

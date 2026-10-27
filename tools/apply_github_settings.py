@@ -37,6 +37,8 @@ MANUAL = ("rulesets", "codeql_workflow", "codeql_main_source")
 MERGE_FIELDS = ("allow_merge_commit", "allow_rebase_merge", "allow_squash_merge", "allow_auto_merge",
                 "delete_branch_on_merge", "allow_update_branch",
                 "squash_merge_commit_title", "squash_merge_commit_message")
+REVIEW_FIELDS = ("required_approving_review_count", "dismiss_stale_reviews",
+                 "require_code_owner_reviews", "require_last_push_approval")
 PROTECTION_FLAGS = ("required_linear_history", "allow_force_pushes", "allow_deletions",
                     "required_conversation_resolution", "lock_branch")
 # A protection PUT resets these, and the baseline does not record them, so they must be off.
@@ -144,7 +146,7 @@ def writes_for(name, expected, prefix, branch):
         body = {
             "required_status_checks": {key: expected["required_status_checks"][key] for key in ("strict", "checks")},
             "enforce_admins": expected["enforce_admins"]["enabled"],
-            "required_pull_request_reviews": expected["required_pull_request_reviews"],
+            "required_pull_request_reviews": {key: expected["required_pull_request_reviews"][key] for key in REVIEW_FIELDS},
             "restrictions": None,
             **{flag: expected[flag]["enabled"] for flag in PROTECTION_FLAGS},
         }
