@@ -52,7 +52,8 @@
 ## 5. 리뷰와 병합
 
 - 독립 리뷰는 작성자와 분리한 컨텍스트에서 Standards·Spec을 각각 실행한다. 권한·Secret·dependency·workflow 신뢰 경계 변경에는 Security를 추가한다.
-- 다른 모델 리뷰: 권한·Secret·workflow·저장소 설정·dependency 정책을 바꾸는 PR에는 작성자와 다른 모델의 리뷰를 추가한다. 그 외 PR은 선택이다. 같은 입력이면 다른 모델도 같은 문제를 놓칠 수 있다.
+- 외부 리뷰: 권한·Secret·workflow·저장소 설정·dependency 정책을 바꾸는 PR에는 작성자 세션 밖의 리뷰를 하나 더한다. 공개 저장소는 CodeRabbit 무료 플랜의 리뷰로 충족한다. CodeRabbit 리뷰를 받을 수 없는 비공개 저장소는 다른 모델의 리뷰를 받거나, 받지 못한 사실을 기록하고 사람 승인 여부를 위험 기준으로 판단한다. 그 외 PR은 선택이다.
+- CodeRabbit은 참고용 리뷰다. 필수 체크로 두지 않는다. 지적은 확인해 맞는 것만 고치고, 스레드마다 반영 여부를 답한 뒤 해결한다. Autofix·수정안 바로 커밋·docstring·테스트 생성은 쓰지 않는다. 다시 리뷰가 필요하면 `@coderabbitai full review`를 쓴다.
 - 병합 전에 PR 본문이 저장소 PR 양식을 따르는지 확인한다(관련 Issue 또는 생략 이유, 플래그 상태 등). Dependabot PR에는 사람용 양식을 강제하지 않는다.
 - 다른 사람이나 봇의 PR 브랜치에 커밋을 추가하면 PR 댓글로 알린다. 추가 커밋은 최종 head 리뷰와 필수 CI를 다시 거친다.
 - 병합 위험 기준은 `prompts/pr-ci-setup.md` §10을 따른다.
