@@ -57,6 +57,27 @@ class OfficeBoundaryTests(unittest.TestCase):
             self.assertEqual(run_gates.main([str(task)]), 1)
             self.assertIn("커밋하지 않은 변경 1개", (task / "REPORT.md").read_text(encoding="utf-8"))
 
+    def test_head_state_sees_moves_and_hidden_untracked_files(self):
+        spec = importlib.util.spec_from_file_location("run_gates", OFFICE / "tools/run_gates.py")
+        run_gates = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(run_gates)
+        with tempfile.TemporaryDirectory() as tmp:
+            git = lambda *args: subprocess.run(["git", "-C", tmp, *args], capture_output=True, text=True, check=True)  # noqa: E731
+            git("init", "-q")
+            git("config", "user.email", "t@example.com")
+            git("config", "user.name", "t")
+            git("config", "status.showUntrackedFiles", "no")
+            (Path(tmp) / "claude-office").mkdir()
+            (Path(tmp) / "claude-office/note one.md").write_text("x\n", encoding="utf-8")
+            git("add", "-A")
+            git("commit", "-qm", "init")
+            sha = git("rev-parse", "HEAD").stdout.strip()
+            (Path(tmp) / "claude-office/scratch.md").write_text("x\n", encoding="utf-8")
+            self.assertEqual(run_gates.head_state(Path(tmp)), (sha, []))
+            git("mv", "claude-office/note one.md", "note one.md")
+            (Path(tmp) / "extra_test.py").write_text("x\n", encoding="utf-8")
+            self.assertEqual(sorted(run_gates.head_state(Path(tmp))[1]), ["extra_test.py", "note one.md"])
+
     def test_copied_manifest_excludes_the_office(self):
         manifest = (ROOT / "templates/repo-baseline.json").read_text(encoding="utf-8")
         self.assertNotIn("claude-office", manifest)

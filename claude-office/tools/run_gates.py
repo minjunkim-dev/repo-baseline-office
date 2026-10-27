@@ -18,10 +18,12 @@ COMMANDS = (
 )
 
 
-def head_state():
+def head_state(root=ROOT):
     """The commit the gates run on, and changes outside the office that are not in it."""
-    git = lambda *args: subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout  # noqa: E731
-    dirty = [line[3:] for line in git("status", "--porcelain").splitlines() if not line[3:].startswith("claude-office/")]
+    git = lambda *args: subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=True).stdout  # noqa: E731
+    # -z keeps paths unquoted; --no-renames reports both sides of a move; untracked files count whatever the local config says.
+    status = git("status", "--porcelain", "-z", "--no-renames", "--untracked-files=all")
+    dirty = [entry[3:] for entry in status.split("\0") if entry and not entry[3:].startswith("claude-office/")]
     return git("rev-parse", "HEAD").strip(), dirty
 
 
