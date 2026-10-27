@@ -9,7 +9,7 @@
 3. 프로젝트의 `docs/agents/issue-tracker.md`에 실제 추적 위치와 조회·생성·상태 변경·부모/자식·의존성·완료 처리 방법을 기록한다. GitHub remote면 GitHub Issues를 제안하되 기존 GitLab·로컬 Markdown·Jira·Linear 관례를 보존한다. PR을 요청 수집 대상으로 삼는 옵션은 기본 Off다.
 4. `triage`가 설치돼 있으면 기존 라벨과 다섯 역할을 대조한다. 기본값은 `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`다. 선택한 매핑만 `docs/agents/triage-labels.md`에 기록하고 승인된 누락 라벨을 만든다. `triage`가 없으면 해당 문서·지침 블록을 생략한다.
 5. `docs/agents/domain.md`에 소비 규칙을 연결한다. 기본은 root `GLOSSARY.md`와 `docs/adr/`다. 실제 모노레포 경계가 있을 때만 여러 컨텍스트를 제안한다. 탐색 전에 관련 용어집·ADR을 읽고, 용어집 표현을 사용하며 ADR 충돌을 드러낸다. 없는 도메인 문서는 필요가 생길 때 만든다.
-6. `AGENTS.md`의 `## Agent skills` 블록을 갱신한다. 파일이 없으면 `AGENTS.md`를 만든다. 중복 블록·새 shim·symlink를 만들지 않는다. 사용하는 런타임이 `AGENTS.md`를 읽는지 확인하고 자동 로딩이 없으면 시작 절차에 명시적 읽기를 연결한다.
+6. `AGENTS.md`의 `## Agent skills` 블록을 갱신한다. 파일이 없으면 `AGENTS.md`를 만든다. 기존 `CLAUDE.md`가 있으면 고유 규칙을 `AGENTS.md`로 옮기고 `CLAUDE.md`는 지운다. 개인·전역 지침은 건드리지 않는다. 중복 블록·새 shim·symlink를 만들지 않는다. 사용하는 런타임이 `AGENTS.md`를 읽는지 확인하고 자동 로딩이 없으면 시작 절차에 명시적 읽기를 연결한다.
 
 완료 조건: 선택한 tracker의 읽기 동작을 확인하고, 지침에서 tracker·도메인·설치된 경우 라벨 문서에 도달할 수 있어야 한다. 실제 생성·수정한 라벨과 미검증된 외부 쓰기는 구분한다. 이미 설정돼 있으면 전체 셋업 대신 바뀐 항목만 갱신한다.
 
