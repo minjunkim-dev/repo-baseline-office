@@ -1,5 +1,11 @@
 # 변경 기록
 
+## 2026-10-27 — GitHub 설정 적용 도구
+
+- `tools/apply_github_settings.py`를 추가했다. 프로젝트의 `.github/repository-settings.json`(감사 도구와 같은 기준선)을 읽어 다른 항목만 쓴다. 기본 실행은 계획만 출력하고, `--apply`는 쓴 뒤 다시 감사한다. 공개 여부·기본 브랜치·ruleset·workflow 파일은 쓰지 않는다. 404만 "아직 설정 안 됨"으로 보고 다른 조회 오류는 실패로 끝낸다.
+- 새 프로젝트의 기준선 시작점 `templates/repository-settings.json`과 이 저장소 자신의 `.github/repository-settings.json`을 두었다. 정책 값이 서로 어긋나면 `tools` 테스트가 실패한다.
+- 공통 검사기(`scripts/`)는 바뀌지 않아 소비 프로젝트 재적용은 필요 없다. 각 프로젝트는 기준선을 채운 뒤 이 도구로 계획을 확인하고 적용할 수 있다.
+
 ## 2026-10-27 — Matt Pocock 스킬 사용법을 다시 적지 않음 (원본과 같게)
 
 - 원본 `repo-baseline`과 같은 변경이다. 개발 절차 문서·PR/CI 셋업 프롬프트·POLICY는 원본과 바이트 단위로 같고, README는 같은 네 문장(일상 개발, 회고, 재적용 순서, 요청문의 외부 리뷰)을 바꿨다.

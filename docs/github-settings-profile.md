@@ -1,6 +1,14 @@
 # GitHub 설정 기준선과 기능 지원
 
-프로젝트의 `.github/repository-settings.json`은 기대값과 감사 범위를 기록한다. GitHub 설정을 자동 적용하지 않는다. 공통 검사기는 GET만 사용한다.
+프로젝트의 `.github/repository-settings.json`은 기대값과 감사 범위를 기록한다. 공통 검사기는 GET만 사용한다. 서버 적용은 원본의 `tools/apply_github_settings.py`가 같은 기준선으로 한다. 시작점은 원본의 `templates/repository-settings.json`이다.
+
+## 적용 도구
+
+1. 기본 실행은 설정을 읽기만 하고 기준선과 다른 항목의 쓰기 요청을 `PLAN`으로 출력한다. 아무것도 쓰지 않는다.
+2. 계획을 사람이 승인하면 `--apply`로 다른 항목만 쓴 뒤 같은 검사기로 다시 감사한다. `PASS`가 아니면 실패로 끝난다.
+3. 공개 여부·기본 브랜치·ruleset·CodeQL workflow 파일은 쓰지 않고 `MANUAL`로 보고한다. 예외로 선언한 항목은 쓰지 않는다.
+4. 404(아직 설정 안 됨)만 쓰기 대상으로 본다. 403 같은 다른 조회 오류는 쓰지 않고 실패로 끝난다.
+5. 기준선 밖의 설정(예: Grouped security updates, private vulnerability reporting, Wiki)은 다루지 않는다.
 
 ## 기존 기준선과 예외
 
