@@ -37,6 +37,7 @@ class FakeGitHub:
         self.state[PROTECTION] = self.protection_view(self.state[PROTECTION])
         self.alerts = expected["dependabot_alerts"]["enabled"]
         self.codeql_pending = 0  # reads that still report the old state after a PATCH
+        self.codeql_missing = 0  # reads after writes that answer 404
         self.writes, self.fail_on = [], None
         if fresh:  # what a new repository answers before any setup
             self.metadata.update(allow_merge_commit=True, allow_rebase_merge=True, allow_auto_merge=False,
@@ -73,6 +74,9 @@ class FakeGitHub:
             raise http_error(path, 404)
         if rel == "actions/permissions/selected-actions" and self.state["actions/permissions"]["allowed_actions"] != "selected":
             raise http_error(path, 409)
+        if rel == "code-scanning/default-setup" and self.codeql_missing and self.writes:
+            self.codeql_missing -= 1
+            raise http_error(path, 404)
         if rel == "code-scanning/default-setup" and self.codeql_pending:
             self.codeql_pending -= 1
             return {"state": "not-configured"}
@@ -170,6 +174,7 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
     def test_fresh_repository_reaches_baseline_and_audit_passes(self):
         server = FakeGitHub(fresh=True)
         server.codeql_pending = 3  # default setup turns on in the background
+        server.codeql_missing = 1  # and may briefly answer 404 first
         code, out, err = self.run_tool(server, apply=True)
         self.assertEqual(code, 0, out + err)
         self.assertIn("PASS:", out)

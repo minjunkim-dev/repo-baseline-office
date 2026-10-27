@@ -225,7 +225,8 @@ def write_api(method, path, body):
 def wait_for_codeql(profile, read, sleep, step=5):
     path = f"repos/{profile['repository']}/{endpoint('codeql', profile['default_branch'])}"
     for _ in range(CODEQL_WAIT // step):
-        if (read(path) or {}).get("state") == profile["expected"]["codeql"]["state"]:
+        current, _ = get(read, path)  # may answer 404 while setup is still being created
+        if (current or {}).get("state") == profile["expected"]["codeql"]["state"]:
             return
         sleep(step)
 
