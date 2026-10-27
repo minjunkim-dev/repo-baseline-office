@@ -1,5 +1,10 @@
 # 변경 기록
 
+## 2026-10-27 — Matt Pocock 스킬 사용법을 다시 적지 않음 (원본과 같게)
+
+- 원본 `repo-baseline`과 같은 변경이다. 개발 절차 문서·PR/CI 셋업 프롬프트·POLICY는 원본과 바이트 단위로 같고, README는 같은 세 문장(일상 개발, 회고, 재적용 순서)을 바꿨다.
+- 스킬의 단계는 설치된 원문대로 쓰고 시작점은 `/ask-matt`에 묻는다. 이 저장소에는 스킬이 정하지 않는 선택(`AGENTS.md`만 사용, `main` 경계, 리뷰·회고 정책)만 남긴다.
+
 ## 2026-10-27 — 이 저장소에도 Dependabot 버전 업데이트 적용
 
 - `.github/dependabot.yml`을 두었다. 생태계가 GitHub Actions뿐이라 `templates/dependabot.yml`을 그대로 쓴다. SHA로 고정한 `check.yml`의 action은 보안 알림이 생기지 않으므로 이 정기 업데이트로만 갱신된다(`POLICY.md` §2).
