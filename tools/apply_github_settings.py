@@ -97,6 +97,12 @@ def get(read, path):
         return None, False
 
 
+def leaves(value, path):
+    if isinstance(value, dict) and value:
+        return [leaf for key, item in value.items() for leaf in leaves(item, f"{path}.{key}")]
+    return [path]
+
+
 def value_at(data, path):
     if data is None:
         return "<not set>"
@@ -184,7 +190,8 @@ def plan(profile, read=None):
             if name == "dependabot_alerts":
                 actual = {"enabled": found}  # 204 with no body when on, 404 when off
         current[name] = actual if isinstance(actual, dict) else {}
-        drift = checker.differences(expected[name], actual, name)
+        # A control that is not set yet differs in every field; list them so unaudited ones still show.
+        drift = leaves(expected[name], name) if actual is None else checker.differences(expected[name], actual, name)
         if not drift:
             continue
         if name in MANUAL:

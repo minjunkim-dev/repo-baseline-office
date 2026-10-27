@@ -155,7 +155,7 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual({command[3] for command in commands}, {"GET"})
         self.assertIn('DIFF: repository.allow_merge_commit: true -> false', out)
-        self.assertIn('DIFF: protection: "<not set>" -> ', out)
+        self.assertIn('DIFF: protection.enforce_admins.enabled: "<not set>" -> true', out)
         self.assertIn("PLAN: PUT repos/owner/repo/branches/main/protection", out)
 
     def test_protection_request_body(self):
@@ -223,6 +223,15 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
                 code, out, _ = self.run_tool(server, apply=True)
                 self.assertNotIn(("PUT", PROTECTION), server.writes)
                 self.assertIn(f"MANUAL: protection.required_pull_request_reviews.{key} is set", out)
+
+    def test_unaudited_fields_are_reported_when_the_control_is_not_set_yet(self):
+        profile = copy.deepcopy(BASELINE)
+        profile["expected"]["protection"]["required_pull_request_reviews"]["dismissal_restrictions"] = {"users": []}
+        server = FakeGitHub(fresh=True)
+        code, out, _ = self.run_tool(server, profile)
+        self.assertIn("MANUAL: protection.required_pull_request_reviews.dismissal_restrictions", out)
+        self.assertIn('DIFF: protection.required_linear_history.enabled: "<not set>" -> true', out)
+        self.assertIn("PLAN: PUT repos/owner/repo/branches/main/protection", out)
 
     def test_advanced_codeql_keeps_default_setup_until_the_workflow_is_active(self):
         profile = copy.deepcopy(BASELINE)
