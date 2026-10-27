@@ -1,0 +1,20 @@
+name: Release note
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: Release note text
+        required: true
+
+permissions: write-all
+
+jobs:
+  note:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print note
+        run: echo "Release note: ${{ inputs.note }}"
+      - name: Print reviewer
+        run: echo "Reviewer: ${{ inputs.notee }}"

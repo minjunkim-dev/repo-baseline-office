@@ -2,12 +2,13 @@
 """Plan a deploy to the only allowed target. This does not contact a server."""
 
 import argparse
+import os
 import sys
 
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Plan a deploy to an allowed target.")
-    parser.add_argument("--target", required=True, choices=("staging",))
+    parser.add_argument("--target", required=True, choices=("staging", "prod"))
     return parser
 
 
