@@ -32,11 +32,7 @@
         "strict": true,
         "checks": [
           {
-            "context": "Baseline checks (Python 3.11)",
-            "app_id": 15368
-          },
-          {
-            "context": "Baseline checks (Python 3.13)",
+            "context": "Baseline checks",
             "app_id": 15368
           }
         ]
