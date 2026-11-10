@@ -85,7 +85,7 @@ def run_worker(name, cwd, argv, message):
     binary = binary and os.path.abspath(binary)  # which() keeps a relative PATH entry relative, and hc starts in cwd
     try:
         version = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=30).stdout if binary else ""
-    except (OSError, subprocess.TimeoutExpired):  # a hung or unrunnable binary blocks the task like an unreadable version
+    except (OSError, ValueError, subprocess.TimeoutExpired):  # hung, unrunnable or not UTF-8: block like an unreadable version
         version = ""
     if error := claude_too_old(version):
         return error

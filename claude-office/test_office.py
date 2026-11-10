@@ -282,6 +282,7 @@ class PipelineTests(unittest.TestCase):
         fake, calls = Path(self.tmp.name) / "claude", []
         self.engine.hc = lambda *args, check=True: calls.append(args) or ""
         for script, started in (("#!/bin/sh\necho '2.1.256 (Claude Code)'\n", False), ("\0not a program", False),
+                                ("#!/bin/sh\nprintf '\\377'\n", False),
                                 ("#!/bin/sh\necho '2.1.257 (Claude Code)'\n", True)):
             fake.write_text(script, encoding="utf-8")
             fake.chmod(0o755)
