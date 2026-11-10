@@ -1,0 +1,11 @@
+# Example block. Paste it under `updates:` in .github/dependabot.yml once per package manager,
+# then change package-ecosystem and directory. Values for package-ecosystem:
+# https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+  - package-ecosystem: npm   # e.g. npm, pip, uv, gomod, cargo, gradle, maven, bundler
+    directory: /             # folder that holds the manifest
+    schedule:
+      interval: weekly
+    labels: [dependencies]
+    commit-message:
+      prefix: chore
+      include: scope

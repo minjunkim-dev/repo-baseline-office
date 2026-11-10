@@ -4,7 +4,7 @@
 Usage: tools/apply_github_settings.py <project> [--apply]
 
 Reads <project>/.github/repository-settings.json, the baseline that the project's
-read-only scripts/check_github_settings.py audits. Without --apply it only reads:
+read-only tools/check_github_settings.py audits. Without --apply it only reads:
 for each control that differs it prints every differing value (current -> baseline)
 and the write that would fix it. --apply plans again, makes those writes, then
 audits. A control is written whole, so one differing field resends its other
@@ -15,7 +15,7 @@ It never changes visibility, rulesets, workflow files, fields the auditor does n
 require, or branch protection that carries settings the baseline does not manage
 (signed commits, push restrictions, blocked creations, fork syncing, review bypass
 or dismissal lists); those are printed as MANUAL. Under an advanced CodeQL baseline
-it keeps default setup on until the CodeQL workflow is active and matches its pin on main. Declared exceptions
+it keeps default setup on until the CodeQL workflow is active. Declared exceptions
 are never written. Unfilled template values ("REPLACE...") stop it before any read.
 """
 
@@ -26,14 +26,14 @@ import sys
 import time
 
 HERE = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(HERE / "scripts"))
+sys.path.insert(0, str(HERE / "tools"))
 import check_github_settings as checker  # noqa: E402
 
 PROFILE = ".github/repository-settings.json"
 # Write order matters: security updates need alerts on; selected actions need allowed_actions=selected.
 ORDER = ("dependabot_alerts", "repository", "protection", "actions", "allowed_actions",
-         "workflow_token", "fork_policy", "immutable_releases", "codeql")
-MANUAL = ("rulesets", "codeql_workflow", "codeql_main_source")
+         "workflow_token", "fork_policy", "immutable_releases", "private_vulnerability_reporting", "codeql")
+MANUAL = ("rulesets", "codeql_workflow")
 MERGE_FIELDS = ("allow_merge_commit", "allow_rebase_merge", "allow_squash_merge", "allow_auto_merge",
                 "delete_branch_on_merge", "allow_update_branch",
                 "squash_merge_commit_title", "squash_merge_commit_message")
@@ -57,9 +57,9 @@ def endpoint(name, branch):
         "workflow_token": "actions/permissions/workflow",
         "fork_policy": "actions/permissions/fork-pr-contributor-approval",
         "immutable_releases": "immutable-releases",
+        "private_vulnerability_reporting": "private-vulnerability-reporting",
         "codeql": "code-scanning/default-setup",
         "codeql_workflow": "actions/workflows/codeql.yml",
-        "codeql_main_source": f"contents/.github/workflows/codeql.yml?ref={branch}",
     }[name]
 
 
@@ -157,7 +157,7 @@ def writes_for(name, expected, prefix, branch):
             **{flag: expected[flag]["enabled"] for flag in PROTECTION_FLAGS},
         }
         return [("PUT", f"{prefix}/{endpoint(name, branch)}", body)]
-    if name in ("dependabot_alerts", "immutable_releases"):
+    if name in ("dependabot_alerts", "immutable_releases", "private_vulnerability_reporting"):
         return [(toggle(expected["enabled"]), f"{prefix}/{endpoint(name, branch)}", None)]
     if name == "codeql":
         return [("PATCH", f"{prefix}/{endpoint(name, branch)}", {"state": expected["state"]})]
@@ -189,6 +189,9 @@ def plan(profile, read=None):
             actual, found = get(read, f"{prefix}/{endpoint(name, branch)}")
             if name == "dependabot_alerts":
                 actual = {"enabled": found}  # 204 with no body when on, 404 when off
+            if name == "private_vulnerability_reporting" and not found:
+                # Off answers {"enabled": false}; 404 means the feature is unavailable (private repository).
+                raise ValueError("private-vulnerability-reporting answered 404; declare it as an exception")
         current[name] = actual if isinstance(actual, dict) else {}
         # A control that is not set yet differs in every field; list them so unaudited ones still show.
         drift = leaves(expected[name], name) if actual is None else checker.differences(expected[name], actual, name)
@@ -214,12 +217,12 @@ def plan(profile, read=None):
                 manual.extend(f"protection.{key} is set; writing protection would reset it" for key in kept)
                 continue
         if name == "codeql" and expected[name]["state"] == "not-configured" and "codeql_workflow" in expected:
-            found = {key: get(read, f"{prefix}/{endpoint(key, branch)}")[0] for key in ("codeql_workflow", "codeql_main_source")}
+            workflow = get(read, f"{prefix}/{endpoint('codeql_workflow', branch)}")[0]
             # The workflow must really run, whatever state the baseline records for it.
-            ready = (found["codeql_workflow"] or {}).get("state") == "active" and not any(
-                checker.differences(expected[key], value, key) for key, value in found.items())
+            ready = (workflow or {}).get("state") == "active" and not checker.differences(
+                expected["codeql_workflow"], workflow, "codeql_workflow")
             if not ready:
-                manual.append("codeql.state: default setup stays on until the advanced workflow is active and pinned on main")
+                manual.append("codeql.state: default setup stays on until the advanced workflow is active")
                 continue
         shown = [(path, value_at(actual, path), value_at(expected[name], path)) for path in drift]
         changes.append((shown, writes_for(name, expected[name], prefix, branch)))

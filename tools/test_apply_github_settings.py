@@ -13,7 +13,6 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-sys.path.insert(0, str(ROOT / "scripts"))
 import apply_github_settings as tool  # noqa: E402
 import check_github_settings as checker  # noqa: E402
 from test_github_settings import BASELINE  # noqa: E402
@@ -54,6 +53,7 @@ class FakeGitHub:
                                                  "can_approve_pull_request_reviews": True},
                 "actions/permissions/fork-pr-contributor-approval": {"approval_policy": "first_time_contributors"},
                 "immutable-releases": {"enabled": False, "enforced_by_owner": False},
+                "private-vulnerability-reporting": {"enabled": False},
                 "code-scanning/default-setup": {"state": "not-configured"},
             })
 
@@ -102,6 +102,8 @@ class FakeGitHub:
             self.alerts = on
         elif rel == "immutable-releases":
             self.state[rel] = {"enabled": on, "enforced_by_owner": False}
+        elif rel == "private-vulnerability-reporting":
+            self.state[rel] = {"enabled": on}
         elif rel == "code-scanning/default-setup":
             self.state[rel] = {"state": body["state"], "languages": ["python"]}
         elif rel == PROTECTION:
@@ -188,12 +190,13 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
     def test_switching_features_off_uses_delete(self):
         profile = copy.deepcopy(BASELINE)
         profile["expected"]["immutable_releases"]["enabled"] = False
+        profile["expected"]["private_vulnerability_reporting"]["enabled"] = False
         profile["expected"]["repository"]["security_and_analysis"]["dependabot_security_updates"]["status"] = "disabled"
         server = FakeGitHub()
         self.assertEqual(self.run_tool(server, profile, apply=True)[0], 0)
         self.assertEqual(sorted(server.writes), sorted([
             ("PATCH", ""), ("DELETE", "automated-security-fixes"),
-            ("DELETE", "immutable-releases")]))
+            ("DELETE", "immutable-releases"), ("DELETE", "private-vulnerability-reporting")]))
 
     def test_visibility_and_rulesets_are_left_to_a_person(self):
         server = FakeGitHub()
@@ -238,7 +241,6 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
         workflow = ".github/workflows/codeql.yml"
         profile["expected"]["codeql"] = {"state": "not-configured"}
         profile["expected"]["codeql_workflow"] = {"path": workflow, "state": "active"}
-        profile["expected"]["codeql_main_source"] = {"path": workflow, "type": "file", "sha": "0" * 40}
         server = FakeGitHub()
         server.state["code-scanning/default-setup"] = {"state": "configured"}
         code, out, _ = self.run_tool(server, profile, apply=True)
@@ -246,9 +248,6 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
         self.assertNotIn(("PATCH", "code-scanning/default-setup"), server.writes)
         self.assertIn("MANUAL: codeql.state: default setup stays on", out)
         server.state["actions/workflows/codeql.yml"] = {"path": workflow, "state": "active"}
-        self.run_tool(server, profile, apply=True)  # active, but main does not hold the pinned file yet
-        self.assertNotIn(("PATCH", "code-scanning/default-setup"), server.writes)
-        server.state[tool.endpoint("codeql_main_source", "main")] = {"path": workflow, "type": "file", "sha": "0" * 40}
         disabled = copy.deepcopy(profile)  # a baseline that records a disabled workflow must not turn scanning off
         disabled["expected"]["codeql_workflow"]["state"] = "disabled_manually"
         server.state["actions/workflows/codeql.yml"]["state"] = "disabled_manually"
@@ -257,6 +256,20 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
         server.state["actions/workflows/codeql.yml"]["state"] = "active"
         self.run_tool(server, profile, apply=True)
         self.assertIn(("PATCH", "code-scanning/default-setup"), server.writes)
+
+    def test_retired_workflow_pin_stops_before_any_request(self):
+        profile = copy.deepcopy(BASELINE)
+        workflow = ".github/workflows/codeql.yml"
+        profile["expected"]["codeql"] = {"state": "not-configured"}
+        profile["expected"]["codeql_workflow"] = {"path": workflow, "state": "active"}
+        profile["expected"]["codeql_main_source"] = {"path": workflow, "type": "file", "sha": "0" * 40}
+        server = FakeGitHub()
+        reads = []
+        server_read = server.read
+        server.read = lambda path: reads.append(path) or server_read(path)
+        code, _, err = self.run_tool(server, profile, apply=True)
+        self.assertEqual((code, reads, server.writes), (2, [], []))
+        self.assertIn("codeql_main_source", err)
 
     def test_fields_the_auditor_does_not_require_are_not_written(self):
         profile = copy.deepcopy(BASELINE)
@@ -280,6 +293,13 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("FAILED: timed out", err)
         self.assertIn("Outcome unknown: PUT repos/owner/repo/vulnerability-alerts", err)
+
+    def test_unavailable_vulnerability_reporting_stops_before_any_write(self):
+        server = FakeGitHub(fresh=True)
+        server.state["private-vulnerability-reporting"] = None  # a private repository answers 404
+        code, _, err = self.run_tool(server, apply=True)
+        self.assertEqual((code, server.writes), (2, []), err)
+        self.assertIn("private-vulnerability-reporting answered 404", err)
 
     def test_bad_profiles_and_read_errors_write_nothing(self):
         cases = {
@@ -359,12 +379,22 @@ class ApplyGitHubSettingsTests(unittest.TestCase):
             tool.load(project)
 
     def test_template_and_own_profiles_share_the_policy_values(self):
-        template = json.loads((ROOT / "templates/repository-settings.json").read_text(encoding="utf-8"))
+        template = json.loads((ROOT / "templates/github/repository-settings.json").read_text(encoding="utf-8"))
         project = Path(self.project(template))
         with self.assertRaisesRegex(ValueError, "REPLACE|template"):
             tool.load(project)
         own = json.loads((ROOT / ".github/repository-settings.json").read_text(encoding="utf-8"))
+        required = own["expected"]["protection"]["required_status_checks"]["checks"]
+        self.assertEqual(
+            [(item["context"], item["app_id"]) for item in required],
+            [("Baseline checks", 15368)],
+        )
         checker.validate_profile(own)
+        placeholder = copy.deepcopy(BASELINE)
+        placeholder["expected"]["protection"]["required_status_checks"]["checks"].append(
+            {"context": "ci", "app_id": "REPLACE:<APP_ID>"})
+        with self.assertRaisesRegex(ValueError, "template values"):
+            tool.load(Path(self.project(placeholder)))
         for profile in (template, own):  # identity, verified checks and third-party actions are per project
             del profile["expected"]["repository"]["visibility"]
             del profile["expected"]["protection"]["required_status_checks"]["checks"]

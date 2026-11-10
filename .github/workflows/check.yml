@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels its older run. Other runs get their own group
+# (run_id), so a newer run never cancels or replaces a pending run on main.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   # Branch protection requires this job name (.github/repository-settings.json).
   baseline:
@@ -22,9 +28,12 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.x'  # latest stable; the scripts use only the standard library
-      - name: Unit tests
-        run: python3 -m unittest discover -s scripts -p 'test_*.py'
-      - name: Tool and distribution tests
+      - name: Tools and layout
         run: python3 -m unittest discover -s tools -p 'test_*.py'
-      - name: Office complementarity tests
+      - name: Profiles
+        run: |
+          for d in profiles/pr-conventions profiles/hash-copy; do
+            python3 -m unittest discover -s "$d" -p 'test_*.py'
+          done
+      - name: Claude office
         run: python3 -m unittest discover -s claude-office -p 'test_*.py'

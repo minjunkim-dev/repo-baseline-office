@@ -1,0 +1,53 @@
+# Copy to .github/workflows/review-status.yml (profiles/review-gate/README.md). The project owns this copy so Dependabot can update the pin.
+name: Review status
+
+# pull_request_target runs this file and the script from the default branch, so a PR cannot change the code this job runs.
+# branches is main: a pull request into any other branch does not run Review status. The checker rejects a base
+# ref other than the repository default branch, and an event base SHA that is not on that branch.
+# Rerunning an old run keeps its BASE_SHA, so retargeting to the default branch does not make that SHA pass.
+# Safe only while no step checks out or runs the PR head.
+# edited re-runs this job when the pull request body changes. ready_for_review re-runs it when a draft becomes ready,
+# even if the body was not edited. The checker parses that body and does not execute it.
+# That rerun does not post or clear review/gate. A body edit leaves a previous App success
+# on the same SHA. A run without --merge clears it only while that SHA is still the open
+# head and the reads succeed. The failure post is one attempt. --merge is the only command
+# that posts success, and it squash-merges that SHA.
+# This workflow does not subscribe to issue_comment. Creating, editing, or deleting an approval comment does not
+# re-run Review status and does not post review/gate. A hard door still needs a new owner comment whose first line
+# is the prefix plus the full head SHA. Do not edit an old approval. Post a new comment, then re-run this workflow
+# for that head by hand (gh run rerun). Posting success is repo-baseline profiles/review-gate/post_review_gate.py --merge only.
+# The checker counts a comment only when REST updated_at equals created_at. Timestamps are whole seconds, so a
+# same-second edit is not distinguished. It does not read or write review/independent or review/security.
+# Those statuses are advisory. It does not write review/gate.
+# review-status-policy.json may still allow issue_comment so an already installed policy stays valid. That allow
+# is not a subscription.
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  review-status:
+    name: Review status
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Evidence table and owner approval on this head
+        run: python3 scripts/check_review_status.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}

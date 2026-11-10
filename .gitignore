@@ -1,4 +1,2 @@
 __pycache__/
 .serena/
-claude-office/worker-01/worktrees/*
-!claude-office/worker-01/worktrees/.gitkeep
