@@ -59,6 +59,9 @@
   "Bash(git *--upload-pack*)",
   "Bash(git *--upload-pa*)",
   "Bash(git *--no-index*)",
+  "Bash(git *--pathspec-f*)",
+  "Bash(git difftool*)",
+  "Bash(git -C repo difftool*)",
   "Bash(git diff* /*)",
   "Bash(git diff* ~*)",
   "Bash(git diff*../*)",
@@ -143,7 +146,7 @@
     "Bash(git -C repo show*)",
     "Bash(git show*)",
     "Bash(git -C {job}/repo add*)",
-    "Bash(git -C {job}/repo commit*)",
+    "Bash(git -C {job}/repo commit -m *)",
     "{allow}"
    ]
   },
@@ -188,7 +191,7 @@
     "Bash(git -C repo fetch origin)",
     "Bash(git fetch origin)",
     "Bash(git -C {job}/repo add*)",
-    "Bash(git -C {job}/repo commit*)",
+    "Bash(git -C {job}/repo commit -m *)",
     "Bash(git -C {job}/repo push origin HEAD)",
     "Bash(gh pr view*)",
     "Bash(gh pr checks*)",

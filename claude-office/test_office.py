@@ -114,13 +114,17 @@ class PipelineTests(unittest.TestCase):
             self.assertIn("Write(**/.git/**)", argv)
             self.assertIn("Bash(git *--output*)", argv)
             self.assertIn("Bash(git *--upload-pack*)", argv)
+            self.assertIn("Bash(git *--pathspec-f*)", argv)  # prints the lines of any file as pathspec errors
+            self.assertIn("Bash(git -C repo difftool*)", argv)  # the diff allow rule also matches difftool -x <command>
             # git diff reads a path outside the repository without --no-index: absolute, ~, .., quoted or $VAR.
             for mark in (" /", " ~", "../", " ..", "/..", '"', "'", "$"):
                 self.assertIn(f"Bash(git diff*{mark}*)", argv)
                 self.assertIn(f"Bash(git -C repo diff*{mark}*)", argv)
         self.assertEqual(r_argv[r_argv.index("--add-dir") + 1], str(office))
         self.assertIn(f"Bash(git -C {self.job}/repo push origin HEAD)", r_argv)
-        self.assertIn(f"Bash(git -C {self.job}/repo commit*)", i_argv)
+        # commit takes -m first: git refuses -F with -m, and -F reads a file outside the task folder into the message.
+        self.assertIn(f"Bash(git -C {self.job}/repo commit -m *)", i_argv)
+        self.assertFalse([r for r in i_argv + r_argv if r.endswith("commit*)")])
         self.assertIn(f"{office}/prompts/review.md", (self.job / "review.prompt.md").read_text())
 
     def test_a_changed_design_needs_a_new_approval(self):
