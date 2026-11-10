@@ -92,6 +92,28 @@ def block(job, reason):
     return BLOCKED
 
 
+def unpinned(task):
+    """Why this checkout may not review the task's PR, else None.
+
+    The review worker runs this checkout's review prompt, preflight script and REVIEW.md. For a PR of this
+    same repository those must be origin/main's copies, or the PR could rewrite its own review.
+    """
+    def git(cwd, *args):
+        return subprocess.run(["git", "-C", str(cwd), *args], capture_output=True, text=True)
+
+    common = [git(d, "rev-parse", "--path-format=absolute", "--git-common-dir").stdout.strip() for d in (BASELINE, task["repo"])]
+    if common[0] != common[1]:
+        return None
+    git(BASELINE, "fetch", "-q", "origin", "main")  # offline: the comparison below uses the last fetched main
+    paths = ["prompts", "tools", "REVIEW.md"]
+    # A missing origin/main makes diff fail, which also blocks.
+    if git(BASELINE, "diff", "--quiet", "origin/main", "--", *paths).returncode or git(
+            BASELINE, "status", "--porcelain", "--untracked-files=all", "--", *paths).stdout.strip():
+        return (f"the PR under review belongs to this repository, and {BASELINE} differs from origin/main in "
+                f"{', '.join(paths)}: run the task from a checkout at origin/main")
+    return None
+
+
 def missing(job, name, *files):
     """One-line error for the first absent task folder or file, else None."""
     if not job.is_dir():
@@ -154,6 +176,8 @@ def run(name, runner=run_worker):
             if result.returncode or dirty:
                 failed = f"`{task['test']}` exit {result.returncode}" + (", uncommitted changes" if dirty else "")
         else:
+            if stage["id"] == "review" and (reason := unpinned(task)):
+                return block(job, reason)
             out = job / stage["out"]
             out.unlink(missing_ok=True)
             prompt = job / f"{stage['id']}.prompt.md"

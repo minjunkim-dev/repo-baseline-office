@@ -199,6 +199,34 @@ class PipelineTests(unittest.TestCase):
         # The first try created the session, so a second --session-id with the same id would be refused.
         self.assertIn("--resume", worker.calls[0][1])
 
+    def test_a_pr_of_this_repository_is_reviewed_only_from_origin_main_copies(self):
+        repo = self.job / "repo"
+        (repo / "tools").mkdir()
+        (repo / "tools/review_preflight.py").write_text("main\n", encoding="utf-8")
+        for args in (["add", "tools"], ["commit", "-q", "-m", "tools"]):
+            subprocess.run(["git", "-C", str(repo), *args], check=True)
+        self.engine.BASELINE = repo  # the office checkout and the product are the same repository
+        (self.job / "design.md").write_text("d\n", encoding="utf-8")
+
+        def review():
+            (self.job / "BLOCKED.md").unlink(missing_ok=True)
+            (self.job / "state.json").write_text(json.dumps({
+                "stage": "review", "since": 0, "fails": {}, "sessions": [],
+                "approved": {"approve": self.engine.sha(self.job / "design.md")}}))
+            worker = FakeWorker(self.job)
+            with contextlib.redirect_stdout(io.StringIO()):
+                return self.engine.run("search", worker), worker.calls
+
+        self.assertEqual(review(), (self.engine.BLOCKED, []))  # no origin/main to compare with
+        subprocess.run(["git", "-C", str(repo), "update-ref", "refs/remotes/origin/main", "HEAD"], check=True)
+        code, calls = review()
+        self.assertEqual((code, len(calls)), (self.engine.DONE, 1))
+        (repo / "tools/review_preflight.py").write_text("from the PR\n", encoding="utf-8")
+        self.assertEqual(review(), (self.engine.BLOCKED, []))  # uncommitted change
+        subprocess.run(["git", "-C", str(repo), "commit", "-q", "-am", "pr"], check=True)
+        self.assertEqual(review(), (self.engine.BLOCKED, []))  # committed on a PR branch
+        self.assertIn("origin/main", (self.job / "BLOCKED.md").read_text(encoding="utf-8"))
+
     def test_task_names_are_safe_folder_and_terminal_names(self):
         for bad in ("../x", "검색", "A", "a" * 25):
             self.assertEqual(self.engine.new(bad, ".", "true", [], "main"), 2)
