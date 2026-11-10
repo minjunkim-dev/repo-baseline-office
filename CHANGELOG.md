@@ -4,6 +4,7 @@
 
 ## 2026-11 — 재설계 이후
 
+- (repo-baseline-office) leader 세션으로 실제 제품 과제(smallnext PR #389)를 돌려 leader 규칙을 고쳤다. 방향을 고르기 전에는 등록하지 않고, `--base origin/main`으로 등록하고, `INTENT.md`를 채운 뒤에만 `run`을 돌린다. 작업자가 `.mise.toml`을 고치지 못하게 했다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) office 리뷰 단계를 실제 PR(#17)로 돌려 막힌 곳을 고쳤다. 리뷰 전 확인은 office 체크아웃의 스크립트를 경로로 돌리고 PR URL만 받는다. 리뷰 작업자가 PR 본문 Review 칸을 올리는 명령을 지시서에 적었다. 구현·리뷰 단계에 `git rev-parse`와 절대 경로 `git status`를 허용했다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `engine.py`의 `run`·`approve`가 과제 폴더, `task.json`, `state.json`(`approve`만)이 없으면 traceback 대신 stderr 한 줄과 종료 코드 2로 끝난다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 기준 파일을 원본 `c3f6d56`과 같게 맞췄다. `claude-office/`를 다시 짰다. 상주 세션은 leader 하나다. 작업자는 `pipeline/engine.py`가 `stages.json`대로 `hc` 터미널에 단계마다 띄운다. 설계 승인은 `design.md` 해시에 묶었다. 원본과 겹치던 관문·MEMORY·HANDBOOK·reviewer 규칙은 지웠다. 소비 레포가 옮길 일은 없다.

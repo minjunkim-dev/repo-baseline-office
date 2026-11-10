@@ -65,7 +65,11 @@
   "Edit(**/.gitmodules)",
   "Write(**/.gitmodules)",
   "Edit(**/.gitattributes)",
-  "Write(**/.gitattributes)"
+  "Write(**/.gitattributes)",
+  "Edit(**/.mise.toml)",
+  "Write(**/.mise.toml)",
+  "Edit(**/mise.toml)",
+  "Write(**/mise.toml)"
  ],
  "flow": [
   {
