@@ -4,7 +4,11 @@
   "--setting-sources",
   "project",
   "--permission-mode",
-  "dontAsk"
+  "dontAsk",
+  "--add-dir",
+  "{baseline}",
+  "--settings",
+  "{\"permissions\":{\"blockReadsOutsideWorkingDirectories\":true}}"
  ],
  "deny": [
   "Read(**/.env*)",
@@ -53,6 +57,8 @@
   "Write(~/**)",
   "Bash(git *--output*)",
   "Bash(git *--upload-pack*)",
+  "Bash(git *--upload-pa*)",
+  "Bash(git *--no-index*)",
   "Bash(git *--receive-pack*)",
   "Bash(git *--exec*)",
   "Bash(git *--ext-diff*)",
@@ -79,7 +85,8 @@
    "prompt": "prompts/design.md",
    "out": "design.md",
    "tools": [
-    "Read",
+    "Read(/{job}/**)",
+    "Read(/{baseline}/**)",
     "Write(/{job}/*.md)",
     "Edit(/{job}/*.md)",
     "Bash(git -C repo status*)",
@@ -100,7 +107,8 @@
    "prompt": "prompts/implement.md",
    "out": "implement.md",
    "tools": [
-    "Read",
+    "Read(/{job}/**)",
+    "Read(/{baseline}/**)",
     "Write(/{job}/*.md)",
     "Edit(/{job}/*.md)",
     "Write(/{job}/repo/**)",
@@ -141,7 +149,8 @@
    "prompt": "prompts/review.md",
    "out": "review.md",
    "tools": [
-    "Read",
+    "Read(/{job}/**)",
+    "Read(/{baseline}/**)",
     "Write(/{job}/*.md)",
     "Edit(/{job}/*.md)",
     "Write(/{job}/repo/**)",
@@ -160,8 +169,8 @@
     "Bash(git log*)",
     "Bash(git -C repo show*)",
     "Bash(git show*)",
-    "Bash(git -C repo fetch*)",
-    "Bash(git fetch*)",
+    "Bash(git -C repo fetch origin)",
+    "Bash(git fetch origin)",
     "Bash(git -C {job}/repo add*)",
     "Bash(git -C {job}/repo commit*)",
     "Bash(git -C {job}/repo push origin HEAD)",
