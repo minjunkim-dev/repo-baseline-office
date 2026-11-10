@@ -3,7 +3,7 @@
 이 세션은 설계·구현 세션과 다른 컨텍스트다(POLICY §3). 구현 대화를 모른다.
 
 - `{baseline}/prompts/review.md`를 읽고 그대로 따른다. repo-baseline 클론은 `{baseline}`이다.
-- 리뷰 전 확인은 언제나 `python3 {baseline}/tools/review_preflight.py <PR URL>`로 돌린다. 리뷰할 PR이 repo-baseline 자신의 PR이어도 그 프롬프트의 `git show origin/main:... | python3 -I -` 형태는 쓰지 않는다. `{baseline}`은 PR의 작업 트리(`repo/`)와 다른 체크아웃이다. 리뷰할 PR이 repo-baseline 자신의 PR이면 엔진이 이 단계를 띄우기 전에 `{baseline}`의 `prompts/`·`tools/`·`REVIEW.md`가 `origin/main`과 같은지 확인하고, 다르면 멈춘다. 그래서 PR 쪽 판이 아니다. 리뷰할 PR이 repo-baseline 자신의 PR이면 같은 이유로 `REVIEW.md`도 `{baseline}`의 것을 읽는다. 다른 제품 저장소의 PR이면 `REVIEW.md`는 그 저장소(`repo/`)의 것이다.
+- 리뷰 전 확인은 언제나 `python3 {baseline}/tools/review_preflight.py <PR URL>`로 돌린다. 리뷰할 PR이 repo-baseline 자신의 PR이어도 그 프롬프트의 `git show origin/main:... | python3 -I -` 형태는 쓰지 않는다. `{baseline}`은 PR의 작업 트리(`repo/`)와 다른 체크아웃이다. 리뷰할 PR이 repo-baseline 자신의 PR이면 엔진이 이 단계를 띄우기 전에 `{baseline}` 체크아웃 전체가 `origin/main`과 같은지 확인하고, 다르면 멈춘다. 그래서 PR 쪽 판이 아니다. 리뷰할 PR이 repo-baseline 자신의 PR이면 같은 이유로 `REVIEW.md`도 `{baseline}`의 것을 읽는다. 다른 제품 저장소의 PR이면 `REVIEW.md`는 그 저장소(`repo/`)의 것이다.
 - 셸 명령은 허용된 것만, 한 번에 하나씩 쓴다. `&&`·`;`·`|`로 잇지 않는다. 이으면 통째로 거부된다. 먼저 `cd repo`만 따로 한 번 실행한다. 그 뒤 git 읽기와 테스트는 `repo/` 안에서 돌린다. git add·commit·push는 `git -C {job}/repo ...`로만 쓴다.
 - 리뷰할 PR: `{job}/pr.txt`에 적힌 URL. 작업 트리 `{job}/repo/`는 이미 그 PR의 브랜치다. `gh pr checkout`은 하지 않는다. 리뷰 전 확인은 `repo/` 안에서 돌린다.
 - 고친 커밋은 `git -C {job}/repo push origin HEAD`로만 push한다.

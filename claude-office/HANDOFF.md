@@ -58,7 +58,7 @@
 - 검사 단계가 테스트가 만든 `__pycache__`를 미커밋 변경으로 셌다. 그래서 git 상태는 테스트 전에 본다.
 - `--setting-sources project`를 주면 사용자 전역 허용 규칙이 새지 않는다. 대신 제품 저장소의 `.claude/settings.json`도 읽지 않는다.
 - 경로 제한 없는 Write·Edit는 위험하다. 작업자가 `.git/hooks`를 심으면 허용된 `git commit`이 그것을 실행한다. 지금은 과제 폴더의 md와 `repo/**`로만 좁혔다.
-- 리뷰할 PR이 이 저장소 자신의 PR이면 원본 `prompts/review.md`는 `git show origin/main:... | python3 -I -`를 요구한다. 파이프라서 통째로 거부되고 작업자는 `BLOCKED.md`를 썼다(PR #17). 그래서 리뷰 지시서가 office 체크아웃의 스크립트를 경로로 돌리게 한다. office 체크아웃이 PR 브랜치에 있으면 PR 쪽 판이 돌므로, 엔진은 과제의 저장소가 office 저장소 자신이면 `prompts/`·`tools/`·`REVIEW.md`가 `origin/main`과 같을 때만 리뷰 단계를 띄운다. 다르면 `BLOCKED.md`를 쓴다. 이 저장소의 PR은 `origin/main`에 있는 체크아웃에서 돌린다.
+- 리뷰할 PR이 이 저장소 자신의 PR이면 원본 `prompts/review.md`는 `git show origin/main:... | python3 -I -`를 요구한다. 파이프라서 통째로 거부되고 작업자는 `BLOCKED.md`를 썼다(PR #17). 그래서 리뷰 지시서가 office 체크아웃의 스크립트를 경로로 돌리게 한다. office 체크아웃이 PR 브랜치에 있으면 PR 쪽 판이 돌므로, 엔진은 office 체크아웃 전체가 `origin/main`과 같고 커밋하지 않은 변경이 없을 때만 리뷰 단계를 띄운다(지시서·단계표·검사 스크립트가 모두 이 체크아웃에서 나온다). 다르면 `BLOCKED.md`를 쓴다. `pr.txt`의 PR이 다른 저장소의 것임이 확실할 때만(PR URL과 office의 origin이 다른 owner/repo) 이 확인을 건너뛴다. 이 저장소의 PR은 `origin/main`에 있는 체크아웃에서 돌린다.
 - 리뷰 작업자가 "Review 칸은 소유자가 채운다"며 PR 본문을 고치지 않은 적이 있다(PR #17). 지시서에 본문을 올리는 명령을 적었다.
 - 구현 작업자는 `git rev-parse`와 `git -C <절대 경로> status`를 썼다가 거부당했다. 두 읽기 명령을 허용에 더했다.
 - 이 저장소 자신을 제품으로 삼으면 `jobs/<과제>/repo/`가 office 체크아웃 안에 생긴다. 원본의 `tools/test_distribution.py` 링크 검사는 git이 무시하는 폴더도 훑어서, 과제가 남아 있는 동안 office 체크아웃의 test 명령이 실패한다. 깨끗한 체크아웃이나 CI에서는 통과한다.

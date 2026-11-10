@@ -221,11 +221,29 @@ class PipelineTests(unittest.TestCase):
         subprocess.run(["git", "-C", str(repo), "update-ref", "refs/remotes/origin/main", "HEAD"], check=True)
         code, calls = review()
         self.assertEqual((code, len(calls)), (self.engine.DONE, 1))
+        (repo / "new.py").write_text("", encoding="utf-8")
+        self.assertEqual(review(), (self.engine.BLOCKED, []))  # untracked file
+        (repo / "new.py").unlink()
         (repo / "tools/review_preflight.py").write_text("from the PR\n", encoding="utf-8")
         self.assertEqual(review(), (self.engine.BLOCKED, []))  # uncommitted change
         subprocess.run(["git", "-C", str(repo), "commit", "-q", "-am", "pr"], check=True)
         self.assertEqual(review(), (self.engine.BLOCKED, []))  # committed on a PR branch
         self.assertIn("origin/main", (self.job / "BLOCKED.md").read_text(encoding="utf-8"))
+
+    def test_review_is_pinned_unless_the_pr_provably_belongs_to_another_repository(self):
+        engine, other = self.engine, Path(self.tmp.name) / "office"
+        subprocess.run(["git", "init", "-q", str(other)], check=True)
+        task = {"repo": str(self.job / "repo")}
+        engine.BASELINE = other  # another git folder, but no origin to tell which repository it is
+        (self.job / "pr.txt").write_text("https://github.com/o/r/pull/1\n")
+        self.assertIn("origin/main", engine.unpinned(self.job, task))
+        engine.BASELINE = ROOT
+        own = engine.slug(subprocess.run(["git", "-C", str(ROOT), "remote", "get-url", "origin"], capture_output=True, text=True).stdout)
+        if own:  # a checkout with a GitHub origin
+            self.assertIsNone(engine.unpinned(self.job, task))
+        self.assertEqual(engine.slug("git@github.com:O/R.git\n"), "o/r")
+        self.assertEqual(engine.slug("https://github.com/o/r/pull/1\n"), "o/r")
+        self.assertIsNone(engine.slug("/tmp/r"))
 
     def test_task_names_are_safe_folder_and_terminal_names(self):
         for bad in ("../x", "검색", "A", "a" * 25):
