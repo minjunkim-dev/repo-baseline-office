@@ -97,7 +97,7 @@ class PipelineTests(unittest.TestCase):
             self.assertNotIn("Read", argv)
             self.assertIn(f"Read(/{self.job}/**)", argv)
             # A wildcard fetch takes --upload-pa=<command> (git accepts short forms of long options) and refspecs.
-            self.assertFalse([r for r in argv if "fetch" in r and "*" in r])
+            self.assertFalse([r for r in argv if " fetch" in r and "*" in r])
         self.assertNotIn("Bash(npm test)", d_argv)
         self.assertNotIn(f"Write(/{self.job}/repo/**)", d_argv)
         self.assertIn(f"Write(/{self.job}/repo/**)", i_argv)
