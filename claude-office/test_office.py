@@ -114,6 +114,10 @@ class PipelineTests(unittest.TestCase):
             self.assertIn("Write(**/.git/**)", argv)
             self.assertIn("Bash(git *--output*)", argv)
             self.assertIn("Bash(git *--upload-pack*)", argv)
+            # git diff reads a path outside the repository without --no-index: absolute, ~, .., quoted or $VAR.
+            for mark in (" /", " ~", "../", '"', "'", "$"):
+                self.assertIn(f"Bash(git diff*{mark}*)", argv)
+                self.assertIn(f"Bash(git -C repo diff*{mark}*)", argv)
         self.assertEqual(r_argv[r_argv.index("--add-dir") + 1], str(office))
         self.assertIn(f"Bash(git -C {self.job}/repo push origin HEAD)", r_argv)
         self.assertIn(f"Bash(git -C {self.job}/repo commit*)", i_argv)
