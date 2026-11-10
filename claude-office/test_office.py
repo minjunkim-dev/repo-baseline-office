@@ -163,6 +163,17 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(self.engine.run("search", worker), self.engine.BLOCKED)
         self.assertEqual(worker.calls, [])
 
+    def test_a_worker_that_blocks_keeps_its_session_for_the_next_run(self):
+        def blocks(name, cwd, argv, message):
+            (self.job / "BLOCKED.md").write_text("need a decision\n")
+
+        self.assertEqual(self.engine.run("search", blocks), self.engine.BLOCKED)
+        (self.job / "BLOCKED.md").unlink()
+        worker = FakeWorker(self.job)
+        self.assertEqual(self.engine.run("search", worker), self.engine.WAIT)
+        # The first try created the session, so a second --session-id with the same id would be refused.
+        self.assertIn("--resume", worker.calls[0][1])
+
     def test_task_names_are_safe_folder_and_terminal_names(self):
         for bad in ("../x", "검색", "A", "a" * 25):
             self.assertEqual(self.engine.new(bad, ".", "true", [], "main"), 2)

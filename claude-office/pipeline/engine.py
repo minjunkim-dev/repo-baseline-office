@@ -147,6 +147,7 @@ def run(name, runner=run_worker):
             error = runner(f"{name}-{stage['id']}"[:32], job, claude_argv(config, stage, job, task, state), f"Read {prompt} and follow it exactly.")
             if stage["session"] not in state["sessions"]:
                 state["sessions"].append(stage["session"])
+                save(state_path, state)  # a blocked stage returns below; the next run must still --resume
             if error:
                 return block(job, error)
             if (job / "BLOCKED.md").exists():
