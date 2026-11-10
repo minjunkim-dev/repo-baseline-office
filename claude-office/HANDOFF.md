@@ -65,7 +65,7 @@
 - leader 규칙에 `--base origin/main`이 없을 때는 로컬 `main`에서 worktree가 만들어졌다. 로컬 `main`은 낡았을 수 있다.
 - 제품 저장소가 mise를 쓰면 새 과제 worktree의 `.mise.toml`이 신뢰되지 않아 shim으로 잡힌 도구(cargo 등)가 실패한다(smallnext PR #389). 사람이 `mise trust <job>/repo/.mise.toml`을 한 번 한다. 신뢰된 설정을 작업자가 고치지 못하게 거부 목록에 넣었다.
 - 리뷰 작업자는 leader가 등록한 `--allow` 규칙과 글자까지 같은 명령만 돌릴 수 있다. `Bash(make a b)`만 허용하면 `make a`는 거부된다. 리뷰어가 검사를 다시 돌리지 못하면 「남은 지적」에 그렇게 적는다.
-- 허용 목록의 bare `Read`는 어디든 읽게 했고, `cat` 같은 읽기 전용 명령은 허용 규칙 없이도 돈다. `git fetch*`는 `--upload-pa="<명령>; git-upload-pack"`으로 명령을 실행했다(git 2.54.0에서 확인). 그래서 읽기는 작업 폴더로 막고 fetch는 `origin` 한 형태만 둔다. 2026-11-10에 실제 작업자(Claude Code 2.1.322)로 돌려, 밖의 파일 읽기 세 가지와 fetch 두 가지, `--out''put=`이 거부되고 `git -C repo fetch origin`과 이 체크아웃 읽기가 되는 것을 봤다. 그 뒤 `git -C repo diff /dev/null <밖의 파일>`이 `--no-index` 없이도 내용을 출력하는 것을 보고(git 2.54.0) diff 거부 규칙을 더했다. 이 규칙은 실제 작업자로 시험하지 못했다(2026-11-10, CLI 계정 사용량 한도). 따옴표나 `$`가 든 경로는 diff에 줄 수 없다. 백슬래시로 시작하는 경로(`\/etc/...`)는 규칙으로 막지 않았다.
+- 허용 목록의 bare `Read`는 어디든 읽게 했고, `cat` 같은 읽기 전용 명령은 허용 규칙 없이도 돈다. `git fetch*`는 `--upload-pa="<명령>; git-upload-pack"`으로 명령을 실행했다(git 2.54.0에서 확인). 그래서 읽기는 작업 폴더로 막고 fetch는 `origin` 한 형태만 둔다. 2026-11-10에 실제 작업자(Claude Code 2.1.322)로 돌려, 밖의 파일 읽기 세 가지와 fetch 두 가지, `--out''put=`이 거부되고 `git -C repo fetch origin`과 이 체크아웃 읽기가 되는 것을 봤다. 그 뒤 `git -C repo diff /dev/null <밖의 파일>`이 `--no-index` 없이도 내용을 출력하는 것을 보고(git 2.54.0) diff 거부 규칙을 더했다. 이 규칙은 실제 작업자로 시험하지 못했다(2026-11-10, CLI 계정 사용량 한도). 따옴표나 `$`가 든 경로는 diff에 줄 수 없다. 백슬래시(`\/etc/...`), 중괄호 확장(`{/etc/hosts,}`), 탭, glob으로 만든 경로는 규칙으로 막지 않았다. 이 형태를 `blockReadsOutsideWorkingDirectories`가 막는지는 확인하지 않았다. 막지 않으면 인자를 검사하는 래퍼나 샌드박스(#15)가 필요하다.
 - 거부 목록은 샌드박스가 아니다. 허용한 테스트 명령은 임의 코드를 실행한다. git 와일드카드 규칙은 부분 문자열 거부로 막고 있어 근본 대책이 아니다(#15).
 
 ## 5. 다시 재현하는 법
