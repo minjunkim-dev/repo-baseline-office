@@ -4,6 +4,9 @@
 
 ## 2026-11 — 재설계 이후
 
+- (repo-baseline-office) 리뷰할 PR이 office 저장소 자신의 PR이면(다른 저장소의 PR임이 `pr.txt`와 origin으로 확실하지 않으면) 엔진이 리뷰 단계를 띄우기 전에 office 체크아웃 전체가 `origin/main`과 같은지 확인한다. 다르거나 커밋하지 않은 변경이 있으면 `BLOCKED.md`를 쓰고 멈춘다. 소비 레포가 옮길 일은 없다.
+- (repo-baseline-office) leader 세션으로 실제 제품 과제(smallnext PR #389)를 돌려 leader 규칙을 고쳤다. 방향을 고르기 전에는 등록하지 않고, `--base origin/main`으로 등록하고, `INTENT.md`를 채운 뒤에만 `run`을 돌린다. 작업자가 `.mise.toml`을 고치지 못하게 했다. 소비 레포가 옮길 일은 없다.
+- (repo-baseline-office) office 리뷰 단계를 실제 PR(#17)로 돌려 막힌 곳을 고쳤다. 리뷰 전 확인은 office 체크아웃의 스크립트를 경로로 돌리고 PR URL만 받는다. 리뷰 작업자가 PR 본문 Review 칸을 올리는 명령을 지시서에 적었다. 구현·리뷰 단계에 `git rev-parse`와 절대 경로 `git status`를 허용했다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `engine.py`의 `run`·`approve`가 과제 폴더, `task.json`, `state.json`(`approve`만)이 없으면 traceback 대신 stderr 한 줄과 종료 코드 2로 끝난다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 기준 파일을 원본 `c3f6d56`과 같게 맞췄다. `claude-office/`를 다시 짰다. 상주 세션은 leader 하나다. 작업자는 `pipeline/engine.py`가 `stages.json`대로 `hc` 터미널에 단계마다 띄운다. 설계 승인은 `design.md` 해시에 묶었다. 원본과 겹치던 관문·MEMORY·HANDBOOK·reviewer 규칙은 지웠다. 소비 레포가 옮길 일은 없다.
 - `POLICY.md` §5: 확인 규칙이 없는 하네스는 병합을 막아 두고 그 하네스로는 에이전트 병합을 쓰지 않는다. 전에는 소유자가 막는 규칙을 빼고 쓸 수 있다고 적어, 같은 줄의 "병합에 확인을 받는다"와 어긋났다. 소비 레포는 POLICY를 링크로 따르므로 옮길 일은 없다. 그런 하네스에서 막는 규칙을 뺀 소비 레포는 다시 넣는다.
