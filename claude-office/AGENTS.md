@@ -10,6 +10,7 @@ PR을 열기 전의 작업을 단계로 나눠 돌리는 실험 프로필이다.
 | `pipeline/stages.json` | 단계표. 단계마다 담당(claude·script·human), 지시서, 결과 파일, 허용 도구 |
 | `pipeline/prompts/` | 단계별 지시서 |
 | `pipeline/engine.py` | 단계표대로 다음 단계를 띄운다. 작업자는 `hc` 터미널의 대화형 Claude Code다 |
+| `HANDOFF.md` | 이어받는 사람이 먼저 읽는 상태·함정·남은 이슈 |
 | `jobs/<과제>/` | 과제마다 `INTENT.md`, 단계 결과 파일, 작업 브랜치의 worktree `repo/`. git에 넣지 않는다 |
 
 ## 규칙

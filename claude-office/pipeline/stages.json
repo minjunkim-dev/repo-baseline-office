@@ -58,7 +58,13 @@
   "Bash(git *--config*)",
   "Bash(git *--git-dir*)",
   "Bash(git *--work-tree*)",
-  "Bash(git *-c *)"
+  "Bash(git *-c *)",
+  "Edit(**/.git)",
+  "Write(**/.git)",
+  "Edit(**/.gitmodules)",
+  "Write(**/.gitmodules)",
+  "Edit(**/.gitattributes)",
+  "Write(**/.gitattributes)"
  ],
  "flow": [
   {
