@@ -82,6 +82,7 @@ def run_worker(name, cwd, argv, message):
     """Start an interactive worker in hc, give it one short message, wait for the turn, then end it."""
     # hc resolves PATH on its own, so pin the binary whose version was checked.
     binary = shutil.which(argv[0])
+    binary = binary and os.path.abspath(binary)  # which() keeps a relative PATH entry relative, and hc starts in cwd
     version = subprocess.run([binary, "--version"], capture_output=True, text=True).stdout if binary else ""
     if error := claude_too_old(version):
         return error
