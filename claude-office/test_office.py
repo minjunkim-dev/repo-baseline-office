@@ -103,6 +103,11 @@ class PipelineTests(unittest.TestCase):
         self.assertNotIn(f"Write(/{self.job}/repo/**)", d_argv)
         self.assertIn(f"Write(/{self.job}/repo/**)", i_argv)
         self.assertIn("Bash(npm test)", i_argv)
+        # Bash cd is refused while reads are blocked outside the working directories, so the engine runs the test in repo/.
+        engine_test = f"Bash(python3 {self.engine.OFFICE}/pipeline/engine.py test search)"
+        self.assertIn(engine_test, i_argv)
+        self.assertIn(engine_test, r_argv)
+        self.assertFalse([r for r in d_argv + i_argv + r_argv if r.startswith("Bash(cd")])
         self.assertFalse([r for r in d_argv if "commit" in r])
         self.assertTrue(any("review_preflight.py" in rule for rule in r_argv))
         for argv in (d_argv, i_argv, r_argv):
@@ -290,6 +295,13 @@ class PipelineTests(unittest.TestCase):
                 error = self.engine.run_worker("w", self.job, ["claude", "--flag"], "hi")
             self.assertEqual(error is None, started)
             self.assertEqual([c[-2:] for c in calls if c[0] == "run"], [(str(fake), "--flag")] if started else [])
+
+    def test_test_runs_the_owner_command_in_repo(self):
+        self.assertEqual(self.engine.test("search"), 0)
+        (self.job / "repo/pass").unlink()
+        self.assertNotEqual(self.engine.test("search"), 0)
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(self.engine.test("nope"), 2)
 
     def test_workers_reads_files_only(self):
         self.engine.run("search", FakeWorker(self.job))
