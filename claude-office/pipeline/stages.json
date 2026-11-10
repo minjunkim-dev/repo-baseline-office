@@ -49,7 +49,16 @@
   "Edit(**/.mcp.json)",
   "Write(**/.mcp.json)",
   "Edit(~/**)",
-  "Write(~/**)"
+  "Write(~/**)",
+  "Bash(git *--output*)",
+  "Bash(git *--upload-pack*)",
+  "Bash(git *--receive-pack*)",
+  "Bash(git *--exec*)",
+  "Bash(git *--ext-diff*)",
+  "Bash(git *--config*)",
+  "Bash(git *--git-dir*)",
+  "Bash(git *--work-tree*)",
+  "Bash(git *-c *)"
  ],
  "flow": [
   {

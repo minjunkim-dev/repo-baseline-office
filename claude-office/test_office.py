@@ -98,6 +98,8 @@ class PipelineTests(unittest.TestCase):
             # Bare Write/Edit would let a worker plant a git hook that the allowed commit then runs.
             self.assertFalse({"Write", "Edit"} & set(argv))
             self.assertIn("Write(**/.git/**)", argv)
+            self.assertIn("Bash(git *--output*)", argv)
+            self.assertIn("Bash(git *--upload-pack*)", argv)
         self.assertIn(f"Bash(git -C {self.job}/repo push origin HEAD)", r_argv)
         self.assertIn(f"Bash(git -C {self.job}/repo commit*)", i_argv)
         self.assertIn(f"{ROOT}/prompts/review.md", (self.job / "review.prompt.md").read_text())
