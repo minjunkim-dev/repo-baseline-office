@@ -1,0 +1,26 @@
+{
+  "files": {
+    "scripts/check_repo_baseline.py": {
+      "source": "profiles/hash-copy/check_repo_baseline.py"
+    },
+    "scripts/test_repo_baseline.py": {
+      "source": "profiles/hash-copy/test_repo_baseline.py"
+    },
+    "scripts/workflow_policy.py": {
+      "source": "profiles/pr-conventions/workflow_policy.py"
+    },
+    "scripts/pr_author.py": {
+      "source": "profiles/pr-conventions/pr_author.py"
+    },
+    "scripts/test_workflow_policy.py": {
+      "source": "profiles/pr-conventions/test_workflow_policy.py"
+    },
+    ".github/pull_request_template.md": {
+      "source": ".github/pull_request_template.md"
+    },
+    ".github/dependabot.yml": {
+      "source": "templates/github/dependabot.yml",
+      "ecosystems": []
+    }
+  }
+}
