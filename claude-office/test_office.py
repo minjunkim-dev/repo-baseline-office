@@ -270,6 +270,13 @@ class PipelineTests(unittest.TestCase):
         for bad in ("../x", "검색", "A", "a" * 25):
             self.assertEqual(self.engine.new(bad, ".", "true", [], "main"), 2)
 
+    def test_claude_older_than_the_read_block_is_refused(self):
+        too_old = self.engine.claude_too_old
+        self.assertIsNone(too_old("2.1.257 (Claude Code)\n"))
+        self.assertIsNone(too_old("2.10.0 (Claude Code)"))
+        for version in ("2.1.256 (Claude Code)", "1.9.999", "", "unknown"):
+            self.assertIn("2.1.257", too_old(version))
+
     def test_workers_reads_files_only(self):
         self.engine.run("search", FakeWorker(self.job))
         self.assertEqual(self.engine.workers(), 0)
