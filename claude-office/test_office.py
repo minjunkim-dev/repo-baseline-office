@@ -70,6 +70,11 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(self.engine.run("search", worker), self.engine.WAIT)
         self.assertEqual(self.state()["stage"], "pr")
         self.assertIn("exit 0", (self.job / "check.md").read_text())
+        # An office checkout whose origin differs from the PR's repository, whatever this checkout's origin is.
+        office = Path(self.tmp.name) / "office"
+        subprocess.run(["git", "init", "-q", str(office)], check=True)
+        subprocess.run(["git", "-C", str(office), "remote", "add", "origin", "https://github.com/me/office.git"], check=True)
+        self.engine.BASELINE = office
         (self.job / "pr.txt").write_text("https://github.com/o/r/pull/1\n")
         self.assertEqual(self.engine.run("search", worker), self.engine.DONE)
 
@@ -104,7 +109,7 @@ class PipelineTests(unittest.TestCase):
             self.assertIn("Bash(git *--upload-pack*)", argv)
         self.assertIn(f"Bash(git -C {self.job}/repo push origin HEAD)", r_argv)
         self.assertIn(f"Bash(git -C {self.job}/repo commit*)", i_argv)
-        self.assertIn(f"{ROOT}/prompts/review.md", (self.job / "review.prompt.md").read_text())
+        self.assertIn(f"{office}/prompts/review.md", (self.job / "review.prompt.md").read_text())
 
     def test_a_changed_design_needs_a_new_approval(self):
         worker = FakeWorker(self.job)
