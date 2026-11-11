@@ -104,13 +104,13 @@ class MainTest(unittest.TestCase):
         self.git("add", ".")
         self.git("commit", "-qm", f"add {path}")
 
-    def main(self, head, fork=False):
+    def main(self, head, fork=False, *extra, err=None):
         real = review_preflight.run
         view = json.dumps({"number": 7, "headRefOid": head, "baseRefName": "main", "isCrossRepository": fork})
         out = io.StringIO()
         with patch.object(review_preflight, "run", lambda *a: view if a[0] == "gh" else real(*a)), \
-                redirect_stdout(out), redirect_stderr(io.StringIO()):
-            code = review_preflight.main(["https://example.invalid/pull/7"])
+                redirect_stdout(out), redirect_stderr(err or io.StringIO()):
+            code = review_preflight.main(["https://example.invalid/pull/7", *extra])
         return code, out.getvalue()
 
     def test_env_name_stops_the_review_without_a_diff_command(self):
@@ -145,6 +145,39 @@ class MainTest(unittest.TestCase):
         shown = subprocess.run(command, shell=True, check=True, capture_output=True, text=True).stdout
         self.assertIn("docs/a.md", shown)
         self.assertIn("web/b.md", shown)
+
+    def test_json_gives_the_same_facts_and_a_runnable_diff_argv(self):
+        self.commit("docs/a.md")
+        self.commit("웹/.env.example")
+        head = self.publish()
+        os.chdir("웹")
+        code, out = self.main(head, False, "--json")
+        self.assertEqual(code, 0)
+        self.assertTrue(out.isascii())
+        result = json.loads(out)
+        self.assertEqual({k: v for k, v in result.items() if k != "diff_argv"}, {
+            "pr": 7, "fork": False, "head": head, "base": "refs/remotes/origin/main",
+            "worktree": "same", "unreviewed_examples": ["웹/.env.example"], "secret_hits": []})
+        shown = subprocess.run(result["diff_argv"], check=True, capture_output=True, text=True).stdout
+        self.assertIn("docs/a.md", shown)
+        self.assertNotIn(".env.example", shown)
+
+    def test_json_with_a_secrets_file_has_no_diff_argv(self):
+        self.commit("sub/.env", "SECRET=1\n")
+        code, out = self.main(self.publish(), True, "--json")
+        self.assertEqual(code, 1)
+        result = json.loads(out)
+        self.assertEqual((result["secret_hits"], result["diff_argv"], result["worktree"]),
+                         (["sub/.env"], None, "not_checked"))
+
+    def test_json_prints_nothing_on_stdout_when_the_head_moved(self):
+        self.commit("docs/a.md")
+        old = self.publish()
+        self.commit("docs/b.md")
+        self.publish()
+        err = io.StringIO()
+        self.assertEqual(self.main(old, False, "--json", err=err), (2, ""))
+        self.assertIn("head가 실행 중에 바뀌었다", err.getvalue())
 
     def test_work_tree_on_another_commit_is_reported(self):
         self.commit("docs/a.md")
