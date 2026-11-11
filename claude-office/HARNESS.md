@@ -33,7 +33,7 @@
 | 2026-10-26 | 원본·이 저장소 #3 `9d3958b` | `docs/development-workflow.md` 신설. "개발 절차는 Matt Pocock 스킬이 맡는다" |
 | 2026-10-27 | 이 저장소 #6 `f03a091` | 스킬 사용법을 옮겨 적지 않고 원문을 쓰게 줄임. 시작점은 `/ask-matt` |
 | 2026-11-03 | 원본 CHANGELOG | pstack 배치: `interrogate`, `blast-radius`, `create-verification-skill`, `correct`만. pstack `tdd`·`reflect`·`teach`는 Matt와 겹쳐 쓰지 않음 |
-| ~2026-11-07 | 원본 `55acc14:docs/development-workflow.md` | "Matt 스파인": 사용자가 `/ask-matt` → `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement`. 독립 리뷰는 `/matt-code-review`(저장소에 복사한 code-review). `disable-model-invocation` 스킬은 사용자가 실행하고 에이전트는 요청만 한다 |
+| 2026-11-08 | 원본 `55acc14:docs/development-workflow.md` | "Matt 스파인": 사용자가 `/ask-matt` → `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement`. 독립 리뷰는 `/matt-code-review`(저장소에 복사한 code-review). `disable-model-invocation` 스킬은 사용자가 실행하고 에이전트는 요청만 한다 |
 | 2026-11-08 | 원본 #73·#74 `50cbc15` | 재설계: "어떤 하네스든 `cp`만으로". 스킬·pstack은 전부 선택으로 내림. `vendor/mattpocock-skills/` 삭제 |
 | 2026-11-10 | 원본 #113 `b3a8985`, #114 `06751a9`, #116 | matt-skills 프로필(리뷰 두 축·회고·PR 본문 위임 + `check_skills.py`), pstack 프로필(겹침 표, 사람이 부를 때만) |
 | 2026-11-10 | 이 저장소 #10 `24e227d` | 원본 `c3f6d56`에 맞추며 `docs/development-workflow.md` 삭제. office를 단계 파이프라인으로 다시 지음. office의 어느 판에도 스킬 연결은 없었다 |
@@ -55,7 +55,7 @@ git show f31431f^:docs/archive/CHANGELOG-2026.md       # 재설계 전 변경 �
 
 ## 5. 스킬 호출의 사실
 
-자동 호출과 수동 호출은 우리가 정하는 것이 아니라 스킬 작성자가 frontmatter로 정한다. `disable-model-invocation: true`인 스킬은 사람이 이름을 쳐야만 돈다. 모델도, 다른 스킬도 부를 수 없다(Matt 스킬의 `.agents/invocation.md`). Codex는 같은 뜻을 `agents/openai.yaml`의 `allow_implicit_invocation: false`로 읽는다(`~/.agents/tools/pstack_codex_policy.py`가 pstack에 넣는다).
+자동 호출과 수동 호출은 우리가 정하는 것이 아니라 스킬 작성자가 frontmatter로 정한다. `disable-model-invocation: true`인 스킬은 사람이 이름을 쳐야만 돈다. 모델도, 다른 스킬도 부를 수 없다(Matt 스킬의 `.agents/invocation.md`, 공식 문서 [skills](https://code.claude.com/docs/en/skills) 「Control who invokes a skill」, 2026-11-11 확인). Codex는 같은 뜻을 `agents/openai.yaml`의 `allow_implicit_invocation: false`로 읽는다(`~/.agents/tools/pstack_codex_policy.py`가 pstack에 넣는다).
 
 2026-11-11에 설치본을 직접 확인한 구분:
 
@@ -87,7 +87,7 @@ git show f31431f^:docs/archive/CHANGELOG-2026.md       # 재설계 전 변경 �
 | --- | --- | --- |
 | 지시서(`pipeline/prompts/*.md`)가 스킬을 부르라고 하지 않는다. 리뷰 지시서는 원본 `prompts/review.md`를 따르게 하므로 「스킬 위임」 한 줄로만 간접 연결된다 | 파일 내용 | 확인함 |
 | 리뷰 단계 `tools`에 `Skill`도 `check_skills.py` 실행 규칙도 없다. 작업자는 `--permission-mode dontAsk`라 목록 밖은 거부된다 | [pipeline/stages.json](pipeline/stages.json) | 설정 확인함. `Skill` 도구가 `dontAsk`에서 허용 규칙을 요구하는지는 실행해 보지 않았다 |
-| `--setting-sources project`라 사용자 설정의 `enabledPlugins`(pstack)와 개인 스킬(`~/.claude/skills`, Matt)이 작업자에 안 실릴 가능성이 크다 | 단계표 `runner` | 실행해 보지 않았다 |
+| `--setting-sources project`라 사용자 설정의 `enabledPlugins`(pstack)와 개인 스킬(`~/.claude/skills`, Matt)이 작업자에 안 실릴 가능성이 크다 | 단계표 `runner`. 공식 [CLI reference](https://code.claude.com/docs/en/cli-reference)는 이 플래그가 설정 출처(user, project, local)를 고른다고만 적고, 스킬이 실리는지는 적지 않는다(2026-11-11 확인) | 실행해 보지 않았다 |
 | 작업자의 읽기는 과제 폴더와 이 체크아웃으로 막혀 `~/.claude/skills`의 `SKILL.md`를 Read로 읽지 못한다. `check_skills.py`도 홈의 스킬 폴더를 읽어야 하는데 sandbox가 홈 읽기를 막는다 | [AGENTS.md](AGENTS.md) 규칙 | 설정에서 추론. 실행해 보지 않았다 |
 | 사람만 부르는 스킬은 모델이 부를 수 없다 | §5 | 작성자 규칙 |
 
@@ -114,11 +114,11 @@ git show f31431f^:docs/archive/CHANGELOG-2026.md       # 재설계 전 변경 �
 1. 실측: 단계표 인자 그대로 작업자를 띄워 스킬 목록에 무엇이 보이는지, `Skill` 도구가 허용 규칙 없이 도는지 본다. 완료 기준: 개인 스킬·플러그인 스킬·프로젝트 스킬 각각의 보임/호출 여부를 HANDOFF §4에 적는다. 코드 변경 없음.
 2. 리뷰 위임 연결: 리뷰 단계에서 `check_skills.py` → `code-review` 위임이 실제로 돈다. 완료 기준: 「스킬 위임」 절이 있는 장난감 저장소의 실제 PR에서 리뷰 작업자가 `check_skills.py` 종료 코드 0을 받고 `code-review`를 부른다.
 3. 설계·구현 단계의 자동 가능 스킬 연결(`tdd`, `diagnosing-bugs`, `codebase-design` 등). 완료 기준: 장난감 과제에서 구현 작업자가 `tdd`를 부른 기록이 있다.
-4. leader의 수동 스킬 요청(§8의 3 가안): 접수 때 `ask-matt`·`grill-with-docs`, 어려움 설계 때 `interrogate`, 승인 전 `blast-radius`, 병합 뒤 `retro`를 사람에게 요청한다. 완료 기준: leader 규칙에 단계별 요청이 있고, 실제 과제 하나에서 그 요청이 나왔다.
+4. leader의 수동 스킬 요청(§8의 3, 2026-11-11에 (가)로 정함): 접수 때 `ask-matt`·`grill-with-docs`, 어려움 설계 때 `interrogate`, 승인 전 `blast-radius`, 병합 뒤 `retro`를 사람에게 요청한다. 완료 기준: leader 규칙에 단계별 요청이 있고, 실제 과제 하나에서 그 요청이 나왔다.
 
 ## 10. 이어받는 세션에 줄 프롬프트
 
-아래를 그대로 붙여 넣는다. 이 문서가 `main`에 병합되기 전이면 경로는 worktree다.
+아래를 그대로 붙여 넣는다. 이 문서가 `main`에 병합되기 전이면 원격 브랜치에서 읽는다.
 
 ```text
 repo-baseline-office의 개발 하네스 작업을 이어받아 줘.
@@ -127,8 +127,7 @@ repo-baseline-office의 개발 하네스 작업을 이어받아 줘.
    - claude-office/HARNESS.md  (목표, 구성 요소, 스킬 연결의 빈틈, 다음 순서)
    - claude-office/HANDOFF.md  (엔진 상태와 함정)
    - claude-office/AGENTS.md, 루트 AGENTS.md, POLICY.md
-   위치: main에 없으면 /Volumes/P41_USB4/Developer/worktrees/claude/repo-baseline-office/gallant-stonebraker-cff537
-   (브랜치 claude/dev-harness-operation-67729c). 원본 repo-baseline 로컬 클론은 ~/Workspace/01_Projects/03_SideApp/repo-baseline.
+   위치: main에 없으면 git fetch origin 뒤 원격 브랜치 claude/dev-harness-operation-67729c의 head. 원본 repo-baseline 로컬 클론은 ~/Workspace/01_Projects/03_SideApp/repo-baseline.
 2. HARNESS.md §1의 목표는 2026-11-11에 정했다. 설계하거나 고치기 전에
    §8의 결정 중 아직 정하지 않은 것을 하나씩 물어봐.
 3. 내가 정하면 §9 순서대로 이슈 하나·PR 하나씩 진행해. 첫 단계는 코드 변경 없는 실측이다.
