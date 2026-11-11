@@ -4,6 +4,7 @@
 
 ## 2026-11 — 재설계 이후
 
+- (repo-baseline-office) `claude-office/`를 [minjunkim-dev/repo-office](https://github.com/minjunkim-dev/repo-office)로 옮겼다고 `README.md`와 `claude-office/AGENTS.md` 머리에 적었다. 이 저장소는 보관한다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) claude-office 엔진이 repo-baseline 클론의 경로를 `claude-office/baseline.path`에서 읽는다(없으면 상위 폴더). 클론 밖의 office 체크아웃도 리뷰 전에 `origin/main`과 비교하고, 작업자 sandbox는 이 파일의 쓰기를 막는다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `claude-office/HARNESS.md` §8-7의 제안을 "검증 뒤 원본 `profiles/office`로 옮김"에서 "repo-baseline 클론 경로를 설정으로 받는 별도 저장소"로 바꿨다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `README.md` 머리말이 기준 판을 실제로 맞춘 원본 `49214f2`로, 원본과 다른 곳을 "`CHANGELOG.md` 한 줄"이 아니라 "`(repo-baseline-office)` 줄들"로 적는다. 소비 레포가 옮길 일은 없다.
