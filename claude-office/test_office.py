@@ -317,6 +317,19 @@ class PipelineTests(unittest.TestCase):
         with unittest.mock.patch.dict(os.environ, {"PATH": f"{self.tmp.name}{os.pathsep}{os.environ['PATH']}"}):
             self.assertEqual(self.engine.run_worker("w", self.job, ["claude"], "hi"), "hc run failed: name in use")
 
+    def test_a_worker_that_never_started_leaves_no_session_to_resume(self):
+        names = []
+
+        def runner(name, cwd, argv, message):
+            names.append(name)
+            return self.engine.NotStarted("hc run failed: x")
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.engine.run("search", runner), self.engine.BLOCKED)
+        state = self.job / "state.json"
+        self.assertEqual(json.loads(state.read_text())["sessions"] if state.exists() else [], [])
+        # The jobs folder's tag keeps another checkout's engine from closing this terminal as a leftover.
+        self.assertEqual(names, [f"{self.engine.TAG}-search-design"])
+
     def test_a_second_run_of_the_same_task_stops(self):
         import fcntl
         with open(self.job / "run.lock", "w") as held:
