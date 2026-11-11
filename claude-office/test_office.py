@@ -60,6 +60,16 @@ class PipelineTests(unittest.TestCase):
         (self.job / "INTENT.md").write_text("# search\n", encoding="utf-8")
         (repo / ".git/info/exclude").write_text("pass\n", encoding="utf-8")
         (repo / "pass").write_text("", encoding="utf-8")
+        if not shutil.which("sandbox-exec"):
+            # Off macOS (CI), a stand-in drops `-p <profile>` and runs the command, so the flow tests still reach the
+            # check stage. The real sandbox is tested only where sandbox-exec exists.
+            bin_dir = Path(self.tmp.name) / "bin"
+            bin_dir.mkdir()
+            (bin_dir / "sandbox-exec").write_text('#!/bin/sh\nshift 2\nexec "$@"\n', encoding="utf-8")
+            (bin_dir / "sandbox-exec").chmod(0o755)
+            patcher = unittest.mock.patch.dict(os.environ, {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"})
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def state(self):
         return json.loads((self.job / "state.json").read_text())
@@ -215,6 +225,17 @@ class PipelineTests(unittest.TestCase):
         (self.job / "task.json").write_text(json.dumps(task))
         self.assertEqual(self.engine.run("search", worker), self.engine.WAIT)
         self.assertIn("커밋하지 않은 변경: 없음", (self.job / "check.md").read_text())
+
+    def test_check_stage_blocks_without_sandbox_exec(self):
+        worker = FakeWorker(self.job)
+        self.engine.run("search", worker)
+        self.engine.approve("search")
+        which = shutil.which
+        hide = lambda name, *a, **k: None if name == "sandbox-exec" else which(name, *a, **k)  # noqa: E731
+        with unittest.mock.patch.object(self.engine.shutil, "which", hide):
+            self.assertEqual(self.engine.run("search", worker), self.engine.BLOCKED)
+        self.assertIn("sandbox-exec is missing", (self.job / "BLOCKED.md").read_text())
+        self.assertFalse((self.job / "check.md").exists())
 
     def test_a_worker_that_writes_nothing_is_retried_once(self):
         worker = FakeWorker(self.job, skip=["design"])
