@@ -73,16 +73,36 @@ def claude_argv(config, stage, job, task, state):
 
 
 def sandbox(base, job, task):
-    """Bash and what it starts (tests, git) may write only the task folder and the product repository's git data.
+    """Bash and what it starts (tests, git) may write the task folder and the commits of the product repository.
 
     The office checkout is an --add-dir for reading, and the sandbox makes such folders writable: deny all of it but
-    jobs/. Excluded commands run outside the sandbox: they need the keychain (gh, push), and none runs task code.
+    jobs/. Excluded commands (gh, preflight, push) run outside the sandbox because they need the keychain; the git
+    they run follows this task's git settings and hooks, so the sandbox must not let task code change those.
     """
-    common = subprocess.run(["git", "-C", task["repo"], "rev-parse", "--path-format=absolute", "--git-common-dir"],
-                            capture_output=True, text=True).stdout.strip()
+    def git(*args):
+        return subprocess.run(["git", "-C", str(job / "repo"), "rev-parse", "--path-format=absolute", *args],
+                              capture_output=True, text=True).stdout.strip()
+    common, own = git("--git-common-dir"), git("--git-dir")
     deny = [str(p) for p in BASELINE.iterdir() if p != OFFICE] + [str(p) for p in OFFICE.iterdir() if p != JOBS]
+    # Files that do not exist yet but that a later session or git would read as instructions or settings.
+    for root in (BASELINE, OFFICE, job):
+        deny += [str(root / n) for n in ("CLAUDE.md", "CLAUDE.local.md", "AGENTS.md", ".claude", ".mcp.json", ".envrc", ".git")]
+    # The engine's control files: the edit rules bind the Edit and Write tools only, not code a test runs.
+    deny += [str(job / n) for n in ("task.json", "state.json", "pr.txt", "pr.diff", "run.lock")]
+    # Where git takes settings and hooks: the worktree's gitdir pointer, the shared config and hooks, the worktree links.
+    deny += [str(job / "repo/.git")]
+    if common:
+        deny += [f"{common}/{n}" for n in ("config", "hooks", "info")]
+        # A denied folder also denies what an allow opens inside it (seen with Seatbelt), so list the other worktrees.
+        links = Path(common) / "worktrees"
+        deny += [str(p) for p in (links.iterdir() if links.is_dir() else ()) if str(p) != own]
+    if own and own != common:
+        deny += [f"{own}/{n}" for n in ("commondir", "gitdir", "config.worktree")]
+    allow = [str(job), *([common] if common else [])]
+    if own and own != common:
+        allow.append(own)  # index, HEAD and logs of this worktree
     return {**base, "excludedCommands": [fill(c, job, task) for c in base.get("excludedCommands", [])],
-            "filesystem": {"denyWrite": deny, "allowWrite": [str(job), *([common] if common else [])]}}
+            "filesystem": {"denyWrite": deny, "allowWrite": allow}}
 
 
 def hc(*args, check=True):

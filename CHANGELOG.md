@@ -4,6 +4,7 @@
 
 ## 2026-11 — 재설계 이후
 
+- (repo-baseline-office) 작업자의 Bash를 Claude Code sandbox에서 돌린다(#15). 작업자가 쓴 테스트는 과제 폴더와 커밋에 필요한 git 데이터에만 쓸 수 있고, 엔진의 제어 파일과 git 설정·hook은 고치지 못한다. `gh`·`preflight`·`push`는 키체인이 필요해 sandbox 밖에서 돈다. 검사 단계는 아직 sandbox 밖이다(#29). 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 작업자의 Bash를 Claude Code sandbox에서 돌린다(#15). 작업자가 쓴 테스트는 과제 폴더와 제품 저장소의 git 데이터에만 쓸 수 있다. `gh`·`preflight`·`push`는 키체인이 필요해 sandbox 밖에서 돈다. 검사 단계는 아직 sandbox 밖이다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `engine.py preflight`가 `review_preflight.py --json`을 읽는다. 전에는 출력 마지막 `diff:` 줄을 정규식으로 맞춰 base·head를 꺼냈다. 작업자에게는 그 JSON이 그대로 보인다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 원본 PR minjunkim-dev/repo-baseline#127과 같게 `docs/archive/`를 지웠다. `claude-office/HANDOFF.md`의 남은 일 표에서 닫은 #16을 뺐다. 소비 레포가 옮길 일은 없다.

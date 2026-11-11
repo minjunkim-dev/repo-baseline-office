@@ -95,13 +95,16 @@ class PipelineTests(unittest.TestCase):
             # Reads stay in the task folder and this checkout: a bare Read or cat reaches credentials in the home folder.
             self.assertIn("--add-dir", argv)
             self.assertTrue(json.loads(argv[argv.index("--settings") + 1])["permissions"]["blockReadsOutsideWorkingDirectories"])
-            # Bash and the tests it runs write only the task folder and the product's git data, with no way out.
+            # Bash and the tests it runs write the task folder and commits, not the engine's files or git settings.
             box = json.loads(argv[argv.index("--settings") + 1])["sandbox"]
             self.assertEqual([box[k] for k in ("enabled", "autoAllowBashIfSandboxed", "allowUnsandboxedCommands", "failIfUnavailable")],
                              [True, False, False, True])
             self.assertEqual(box["filesystem"]["allowWrite"][0], str(self.job))
             self.assertIn(str(self.engine.PIPELINE), box["filesystem"]["denyWrite"])
-            self.assertFalse([d for d in box["filesystem"]["denyWrite"] if str(self.job).startswith(d)])
+            deny = box["filesystem"]["denyWrite"]
+            self.assertFalse([d for d in deny if str(self.job).startswith(d)])
+            for name in ("task.json", "state.json", "pr.txt", "repo/.git", "CLAUDE.md"):
+                self.assertIn(str(self.job / name), deny)
             self.assertIn(f"python3 {self.engine.OFFICE}/pipeline/engine.py preflight search", box["excludedCommands"])
             self.assertNotIn("Read", argv)
             self.assertIn(f"Read(/{self.job}/**)", argv)
