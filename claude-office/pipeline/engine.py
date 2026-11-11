@@ -64,9 +64,25 @@ def claude_argv(config, stage, job, task, state):
     for rule in stage["tools"]:
         tools.extend(task["allow"] if rule == "{allow}" else [fill(rule, job, task)])
     argv = [*(fill(arg, job, task) for arg in config["runner"]), flag, session_id(task["name"], key)]
+    if "sandbox" in config:
+        at = argv.index("--settings") + 1
+        argv[at] = json.dumps({**json.loads(argv[at]), "sandbox": sandbox(config["sandbox"], job, task)})
     if stage.get("model"):
         argv += ["--model", stage["model"]]
     return argv + ["--allowedTools", *tools, "--disallowedTools", *[fill(r, job, task) for r in config["deny"]]]
+
+
+def sandbox(base, job, task):
+    """Bash and what it starts (tests, git) may write only the task folder and the product repository's git data.
+
+    The office checkout is an --add-dir for reading, and the sandbox makes such folders writable: deny all of it but
+    jobs/. Excluded commands run outside the sandbox: they need the keychain (gh, push), and none runs task code.
+    """
+    common = subprocess.run(["git", "-C", task["repo"], "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                            capture_output=True, text=True).stdout.strip()
+    deny = [str(p) for p in BASELINE.iterdir() if p != OFFICE] + [str(p) for p in OFFICE.iterdir() if p != JOBS]
+    return {**base, "excludedCommands": [fill(c, job, task) for c in base.get("excludedCommands", [])],
+            "filesystem": {"denyWrite": deny, "allowWrite": [str(job), *([common] if common else [])]}}
 
 
 def hc(*args, check=True):

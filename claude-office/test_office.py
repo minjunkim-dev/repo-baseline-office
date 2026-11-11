@@ -95,6 +95,14 @@ class PipelineTests(unittest.TestCase):
             # Reads stay in the task folder and this checkout: a bare Read or cat reaches credentials in the home folder.
             self.assertIn("--add-dir", argv)
             self.assertTrue(json.loads(argv[argv.index("--settings") + 1])["permissions"]["blockReadsOutsideWorkingDirectories"])
+            # Bash and the tests it runs write only the task folder and the product's git data, with no way out.
+            box = json.loads(argv[argv.index("--settings") + 1])["sandbox"]
+            self.assertEqual([box[k] for k in ("enabled", "autoAllowBashIfSandboxed", "allowUnsandboxedCommands", "failIfUnavailable")],
+                             [True, False, False, True])
+            self.assertEqual(box["filesystem"]["allowWrite"][0], str(self.job))
+            self.assertIn(str(self.engine.PIPELINE), box["filesystem"]["denyWrite"])
+            self.assertFalse([d for d in box["filesystem"]["denyWrite"] if str(self.job).startswith(d)])
+            self.assertIn(f"python3 {self.engine.OFFICE}/pipeline/engine.py preflight search", box["excludedCommands"])
             self.assertNotIn("Read", argv)
             self.assertIn(f"Read(/{self.job}/**)", argv)
             # A wildcard fetch takes --upload-pa=<command> (git accepts short forms of long options) and refspecs.
