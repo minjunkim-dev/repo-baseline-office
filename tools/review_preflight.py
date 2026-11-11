@@ -2,9 +2,11 @@
 """Fetch a PR's base and head and check changed file names for .env* before review opens the diff.
 
 Run it from the working tree of the repository under review:
-    python3 <repo-baseline>/tools/review_preflight.py <PR URL> [--remote origin]
+    python3 <repo-baseline>/tools/review_preflight.py <PR URL> [--remote origin] [--json]
 It never reads file contents or the diff body. Exit 0: no .env* name. 1: a .env* name is changed
 (stop the review). 2: a command failed or the PR head moved during the run (run it again).
+--json prints one JSON object on stdout instead of the text, for tools; exit codes stay the same and
+exit 2 prints nothing on stdout. diff_argv is the diff command as a list, null when the exit code is 1.
 """
 
 import argparse
@@ -45,6 +47,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("pr", help="PR URL or number")
     parser.add_argument("--remote", default="origin", help="remote of the base repository")
+    parser.add_argument("--json", action="store_true", help="print one JSON object for tools")
     args = parser.parse_args(argv)
     try:
         pr = json.loads(run("gh", "pr", "view", args.pr, "--json",
@@ -57,7 +60,8 @@ def main(argv=None):
             f"+refs/pull/{pr['number']}/head:{pr_ref}")
         head = run("git", "rev-parse", pr_ref).strip()
         if head != pr["headRefOid"]:
-            print(f"head가 실행 중에 바뀌었다({pr['headRefOid']} → {head}). 다시 실행한다.")
+            print(f"head가 실행 중에 바뀌었다({pr['headRefOid']} → {head}). 다시 실행한다.",
+                  file=sys.stderr if args.json else sys.stdout)
             return 2
         hits, examples = classify(changed_paths(base, head))
         top = run("git", "rev-parse", "--show-toplevel").strip()
@@ -66,6 +70,16 @@ def main(argv=None):
         print(f"실행 실패: {getattr(error, 'stderr', '') or error}", file=sys.stderr)
         return 2
     fork = pr["isCrossRepository"]
+    # -C <top>: the pathspec `.` is relative to the current folder, so a subfolder would hide the rest.
+    diff_argv = ["git", "-C", top, "diff", f"{base}...{head}", "--", ".", ":!.env*", ":!**/.env*"]
+    if args.json:
+        print(json.dumps({
+            "pr": pr["number"], "fork": fork, "head": head, "base": base,
+            "worktree": "not_checked" if fork else "same" if clean else "different",
+            "unreviewed_examples": examples, "secret_hits": hits,
+            "diff_argv": None if hits else diff_argv,
+        }, ensure_ascii=False))
+        return 1 if hits else 0
     print(f"PR: {pr['number']}  fork: {'예' if fork else '아니요'}")
     print(f"head: {head}")
     print(f"base: {base}")
@@ -74,8 +88,7 @@ def main(argv=None):
     if hits:
         print("리뷰 미완(비밀값 파일): " + ", ".join(hits))
         return 1
-    # -C <top>: the pathspec `.` is relative to the current folder, so a subfolder would hide the rest.
-    print(f"diff: git -C {shlex.quote(top)} diff {base}...{head} -- . ':!.env*' ':!**/.env*'")
+    print("diff: " + shlex.join(diff_argv))
     return 0
 
 
