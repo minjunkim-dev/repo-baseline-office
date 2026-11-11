@@ -6,7 +6,7 @@
   engine.py approve <task>    a person approves the current design file (bound to its sha256)
   engine.py workers           show every task's stage from files only
   engine.py test <task>       run the task's test command in its repo/ (workers cannot cd there)
-  engine.py preflight <task>  run repo-baseline's review preflight for pr.txt in its repo/
+  engine.py preflight <task>  run repo-baseline's review preflight for pr.txt in its repo/, diff into pr.diff
 
 Exit codes for run: 0 done, 3 waiting for a person, 4 blocked.
 """
@@ -16,6 +16,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -259,7 +260,27 @@ def preflight(name):
         return 2
     pr = (job / "pr.txt").read_text(encoding="utf-8").split()  # a person wrote it; workers cannot edit it
     script = BASELINE / "tools/review_preflight.py"
-    return subprocess.run([sys.executable, str(script), *pr[:1]], cwd=job / "repo").returncode
+    diff_file = job / "pr.diff"
+    diff_file.unlink(missing_ok=True)
+    result = subprocess.run([sys.executable, str(script), *pr[:1]], cwd=job / "repo", capture_output=True, text=True)
+    print(result.stdout, end="")
+    print(result.stderr, end="", file=sys.stderr)
+    if result.returncode:  # 1 means a secrets file changed: the review must not open the diff
+        return result.returncode
+    # The worker cannot run the printed diff command: its absolute -C path has no allow rule, and the quoted
+    # pathspecs that keep .env* out hit the quote deny rule. Run exactly that command here and hand over the text.
+    line = next((x for x in result.stdout.splitlines() if x.startswith("diff: ")), "")
+    argv = shlex.split(line[len("diff: "):])
+    if argv[:2] != ["git", "-C"] or argv[3:4] != ["diff"]:
+        print(f"no diff command in the preflight output: {line!r}", file=sys.stderr)
+        return 2
+    diff = subprocess.run(argv, capture_output=True, text=True)
+    if diff.returncode:
+        print(f"diff failed: {diff.stderr.strip()}", file=sys.stderr)
+        return 2
+    diff_file.write_text(diff.stdout, encoding="utf-8")
+    print(f"diff 본문: {diff_file}")
+    return 0
 
 
 def approve(name):

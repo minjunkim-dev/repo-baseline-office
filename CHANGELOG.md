@@ -4,7 +4,7 @@
 
 ## 2026-11 — 재설계 이후
 
-- (repo-baseline-office) `blockReadsOutsideWorkingDirectories`가 켜지면 작업자의 `cd`가 거부되어 구현 단계가 테스트를 돌리지 못했다(#23). 작업자는 이제 `engine.py test <과제>`로 테스트를, `engine.py preflight <과제>`로 리뷰 전 확인을 `repo/`에서 돌린다. leader는 check·test를 `--allow`로 따로 등록하지 않는다. 소비 레포가 옮길 일은 없다.
+- (repo-baseline-office) `blockReadsOutsideWorkingDirectories`가 켜지면 작업자의 `cd`가 거부되어 구현 단계가 테스트를 돌리지 못했다(#23). 작업자는 이제 `engine.py test <과제>`로 테스트를, `engine.py preflight <과제>`로 리뷰 전 확인을 `repo/`에서 돌리고 diff 본문을 `pr.diff`로 받는다. leader는 check·test를 `--allow`로 따로 등록하지 않는다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `claude --version`이 30초 안에 끝나지 않거나 실행되지 않으면 엔진이 `BLOCKED.md`를 쓰고 멈춘다. 전에는 엔진이 그대로 멈추거나 traceback으로 끝났다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 엔진이 작업자를 띄우기 전에 `claude --version`을 확인한다. 2.1.257 미만이거나 판을 읽지 못하면 `BLOCKED.md`를 쓰고 멈춘다. 낮은 판은 `blockReadsOutsideWorkingDirectories`를 말없이 무시한다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 작업자의 읽기를 과제 폴더와 office 체크아웃으로 좁혔다(`--add-dir`, `blockReadsOutsideWorkingDirectories`). 전에는 `Read`와 `cat`이 홈의 자격 증명 파일을 읽을 수 있었다. 리뷰 단계의 `git fetch*`를 `git fetch origin` 한 형태로 좁혔다. 전에는 `--upload-pa=<명령>`으로 명령이 실행됐다. 인자에 절대 경로·`~`·`..` 경로·따옴표·`$`가 든 `git diff`를 거부한다. `git diff`는 `--no-index` 없이도 저장소 밖 파일을 읽는다. commit 허용을 `commit -m ...` 형태로 좁히고 `--pathspec-from-file`과 `git difftool`을 거부한다. 작업자는 `commit -am`을 쓰지 못한다. Claude Code 2.1.257 이상이 필요하다. 소비 레포가 옮길 일은 없다.

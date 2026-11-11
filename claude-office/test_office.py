@@ -312,14 +312,20 @@ class PipelineTests(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(self.engine.preflight("search"), 2)  # no pr.txt yet
         (self.job / "pr.txt").write_text("https://github.com/o/r/pull/1\n")
-        with unittest.mock.patch.object(self.engine.subprocess, "run") as run:
-            run.return_value.returncode = 0
+        done = lambda code, out="": unittest.mock.Mock(returncode=code, stdout=out, stderr="")  # noqa: E731
+        printed = f"head: abc\ndiff: git -C {self.job}/repo diff refs/remotes/origin/main...abc -- . ':!.env*' ':!**/.env*'\n"
+        quiet = contextlib.redirect_stdout(io.StringIO())
+        with unittest.mock.patch.object(self.engine.subprocess, "run") as run, quiet:
+            run.side_effect = [done(0, printed), done(0, "diff --git a/x b/x\n")]
             self.assertEqual(self.engine.preflight("search"), 0)
-            run.return_value.returncode = 1  # the preflight's "secrets file changed, stop the review"
+            (script, kwargs), (diff, _) = run.call_args_list
+            run.side_effect = [done(1, printed)]  # the preflight's "secrets file changed, stop the review"
             self.assertEqual(self.engine.preflight("search"), 1)
-        argv, kwargs = run.call_args
-        self.assertEqual(argv[0][1:], [str(self.engine.BASELINE / "tools/review_preflight.py"), "https://github.com/o/r/pull/1"])
+        self.assertEqual(script[0][1:], [str(self.engine.BASELINE / "tools/review_preflight.py"), "https://github.com/o/r/pull/1"])
         self.assertEqual(kwargs["cwd"], self.job / "repo")
+        # The worker cannot run the printed command (absolute -C path, quoted pathspecs), so the engine runs exactly it.
+        self.assertEqual(diff[0], ["git", "-C", f"{self.job}/repo", "diff", "refs/remotes/origin/main...abc", "--", ".", ":!.env*", ":!**/.env*"])
+        self.assertFalse((self.job / "pr.diff").exists())  # exit 1 removes the last diff and writes none
 
     def test_workers_reads_files_only(self):
         self.engine.run("search", FakeWorker(self.job))
