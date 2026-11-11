@@ -16,7 +16,6 @@ import hashlib
 import json
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -268,12 +267,16 @@ def preflight(name):
     if result.returncode:  # 1 means a secrets file changed: the review must not open the diff
         return result.returncode
     # The worker cannot run the printed diff command: its absolute -C path has no allow rule, and the quoted
-    # pathspecs that keep .env* out hit the quote deny rule. Run exactly that command here and hand over the text.
-    line = next((x for x in result.stdout.splitlines() if x.startswith("diff: ")), "")
-    argv = shlex.split(line[len("diff: "):])
-    if argv[:2] != ["git", "-C"] or argv[3:4] != ["diff"]:
-        print(f"no diff command in the preflight output: {line!r}", file=sys.stderr)
+    # pathspecs that keep .env* out hit the quote deny rule. So the engine runs the same diff and hands over the text.
+    # Earlier lines carry PR file names, which may hold a forged "diff:" line: only the last line counts, it must match
+    # exactly, and the engine builds the command from its base and head instead of running what was printed.
+    lines = result.stdout.splitlines()
+    found = re.fullmatch(r"diff: git -C .+ diff (refs/remotes/[\w./-]+)\.\.\.([0-9a-f]{40}) -- \. ':!\.env\*' ':!\*\*/\.env\*'",
+                         lines[-1] if lines else "")
+    if not found:
+        print("no diff command on the last line of the preflight output", file=sys.stderr)
         return 2
+    argv = ["git", "-C", str(job / "repo"), "diff", f"{found[1]}...{found[2]}", "--", ".", ":!.env*", ":!**/.env*"]
     diff = subprocess.run(argv, capture_output=True, text=True)
     if diff.returncode:
         print(f"diff failed: {diff.stderr.strip()}", file=sys.stderr)
