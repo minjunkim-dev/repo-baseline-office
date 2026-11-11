@@ -78,7 +78,7 @@ def main(argv=None):
             "worktree": "not_checked" if fork else "same" if clean else "different",
             "unreviewed_examples": examples, "secret_hits": hits,
             "diff_argv": None if hits else diff_argv,
-        }, ensure_ascii=False))
+        }))  # ASCII only: a non-UTF-8 stdout would raise and exit 1, the secrets-file code
         return 1 if hits else 0
     print(f"PR: {pr['number']}  fork: {'예' if fork else '아니요'}")
     print(f"head: {head}")

@@ -104,12 +104,12 @@ class MainTest(unittest.TestCase):
         self.git("add", ".")
         self.git("commit", "-qm", f"add {path}")
 
-    def main(self, head, fork=False, *extra):
+    def main(self, head, fork=False, *extra, err=None):
         real = review_preflight.run
         view = json.dumps({"number": 7, "headRefOid": head, "baseRefName": "main", "isCrossRepository": fork})
         out = io.StringIO()
         with patch.object(review_preflight, "run", lambda *a: view if a[0] == "gh" else real(*a)), \
-                redirect_stdout(out), redirect_stderr(io.StringIO()):
+                redirect_stdout(out), redirect_stderr(err or io.StringIO()):
             code = review_preflight.main(["https://example.invalid/pull/7", *extra])
         return code, out.getvalue()
 
@@ -153,6 +153,7 @@ class MainTest(unittest.TestCase):
         os.chdir("web")
         code, out = self.main(head, False, "--json")
         self.assertEqual(code, 0)
+        self.assertTrue(out.isascii())
         result = json.loads(out)
         self.assertEqual({k: v for k, v in result.items() if k != "diff_argv"}, {
             "pr": 7, "fork": False, "head": head, "base": "refs/remotes/origin/main",
@@ -174,7 +175,9 @@ class MainTest(unittest.TestCase):
         old = self.publish()
         self.commit("docs/b.md")
         self.publish()
-        self.assertEqual(self.main(old, False, "--json"), (2, ""))
+        err = io.StringIO()
+        self.assertEqual(self.main(old, False, "--json", err=err), (2, ""))
+        self.assertIn("head가 실행 중에 바뀌었다", err.getvalue())
 
     def test_work_tree_on_another_commit_is_reported(self):
         self.commit("docs/a.md")
