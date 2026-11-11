@@ -312,7 +312,8 @@ class PipelineTests(unittest.TestCase):
         baseline = Path(self.tmp.name) / "baseline"
         for path in (baseline, other):
             subprocess.run(["git", "init", "-q", str(path)], check=True)
-            subprocess.run(["git", "-C", str(path), "commit", "-q", "--allow-empty", "-m", "main"], check=True)
+            subprocess.run(["git", "-C", str(path), "-c", "user.name=t", "-c", "user.email=t@example.com",
+                            "commit", "-q", "--allow-empty", "-m", "main"], check=True)
         subprocess.run(["git", "-C", str(baseline), "update-ref", "refs/remotes/origin/main", "HEAD"], check=True)
         with unittest.mock.patch.object(engine, "BASELINE", baseline), unittest.mock.patch.object(engine, "OFFICE", other):
             self.assertIn(str(other), engine.unpinned(self.job, task))  # the office checkout has no origin/main
