@@ -30,6 +30,11 @@ BASELINE = OFFICE.parent  # this checkout carries repo-baseline's prompts/ and t
 JOBS = Path(os.environ.get("OFFICE_JOBS", OFFICE / "jobs"))
 STAGES = Path(os.environ.get("OFFICE_STAGES", PIPELINE / "stages.json"))
 DONE, WAIT, BLOCKED = 0, 3, 4
+# git the engine runs outside the sandbox over a task's repo/ ignores settings task code could plant, such as a
+# committed nested repository whose config runs core.fsmonitor on `git status`. Env config wins over repository files.
+_SAFE = {"core.fsmonitor": "false", "diff.ignoreSubmodules": "all", "core.hooksPath": "/dev/null"}
+SAFE_GIT = {**os.environ, "GIT_CONFIG_COUNT": str(len(_SAFE)),
+            **{f"GIT_CONFIG_{kind}_{i}": v for i, kv in enumerate(_SAFE.items()) for kind, v in zip(("KEY", "VALUE"), kv)}}
 
 
 def load(path, default):
@@ -84,6 +89,7 @@ def sandbox(base, job, task):
                               capture_output=True, text=True).stdout.strip()
     common, own = git("--git-common-dir"), git("--git-dir")
     deny = [str(p) for p in BASELINE.iterdir() if p != OFFICE] + [str(p) for p in OFFICE.iterdir() if p != JOBS]
+    deny += [str(p) for p in JOBS.iterdir() if p != job]  # other tasks' control files and repositories
     # Files that do not exist yet but that a later session or git would read as instructions or settings.
     for root in (BASELINE, OFFICE, job):
         deny += [str(root / n) for n in ("CLAUDE.md", "CLAUDE.local.md", "AGENTS.md", ".claude", ".mcp.json", ".envrc", ".git")]
@@ -231,7 +237,7 @@ def run(name, runner=run_worker):
                 print(f"waiting: a person writes {job / stage['wait']}")
                 return WAIT
         elif stage["by"] == "script":
-            git = lambda *a: subprocess.run(["git", *a], cwd=job / "repo", capture_output=True, text=True).stdout.strip()  # noqa: E731
+            git = lambda *a: subprocess.run(["git", *a], cwd=job / "repo", capture_output=True, text=True, env=SAFE_GIT).stdout.strip()  # noqa: E731
             # Read what the worker handed over before the test writes its own files (caches, reports).
             head, dirty = git("rev-parse", "HEAD"), git("status", "--porcelain", "--untracked-files=all")
             result = run_test(job, task, capture_output=True, text=True)
@@ -298,7 +304,7 @@ def preflight(name):
     diff_file = job / "pr.diff"
     diff_file.unlink(missing_ok=True)
     result = subprocess.run([sys.executable, str(script), *pr[:1], "--json"], cwd=job / "repo", capture_output=True,
-                            text=True, errors="replace")
+                            text=True, errors="replace", env=SAFE_GIT)
     print(result.stdout, end="")
     print(result.stderr, end="", file=sys.stderr)
     if result.returncode:  # 1 means a secrets file changed: the review must not open the diff
@@ -318,7 +324,7 @@ def preflight(name):
         return 2
     argv = ["git", "-C", str(job / "repo"), "diff", f"{base}...{head}", "--", ".", ":!.env*", ":!**/.env*"]
     # Bytes, not text: a non-UTF-8 file in the PR would raise, and an uncaught error exits 1, the secrets-file code.
-    diff = subprocess.run(argv, capture_output=True)
+    diff = subprocess.run(argv, capture_output=True, env=SAFE_GIT)
     if diff.returncode:
         print(f"diff failed: {diff.stderr.decode(errors='replace').strip()}", file=sys.stderr)
         return 2
