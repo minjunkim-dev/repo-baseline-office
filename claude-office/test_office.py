@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import socket
 import subprocess
 import tempfile
 import unittest
@@ -446,6 +447,20 @@ class PipelineTests(unittest.TestCase):
                                                          "gitfile denied", "claude denied", "tmp ok", "home denied",
                                                          "rename denied"])
         self.assertFalse(outside.exists() or (self.job / "pr.txt").exists() or (self.job / "CLAUDE.md").exists())
+
+    @unittest.skipUnless(shutil.which("sandbox-exec") and shutil.which("nc"), "macOS sandbox-exec")
+    def test_check_stage_reaches_only_unix_sockets_in_the_task_folder(self):
+        # A socket outside, such as /var/run/docker.sock, would let the test start a process outside the sandbox.
+        (self.job / "tmp").mkdir()
+        paths = {"inside": self.job.resolve() / "tmp/in.sock", "outside": Path(self.tmp.name).resolve() / "out.sock"}
+        for path in paths.values():
+            server = socket.socket(socket.AF_UNIX)
+            self.addCleanup(server.close)
+            server.bind(str(path))
+            server.listen()
+        script = "; ".join(f"(nc -U -w 1 {p} </dev/null 2>/dev/null && echo {n} ok || echo {n} denied)" for n, p in paths.items())
+        result = self.engine.run_test(self.job, {"test": script}, sandboxed=True, capture_output=True, text=True)
+        self.assertEqual(result.stdout.split("\n")[:-1], ["inside ok", "outside denied"])
 
     def test_workers_reads_files_only(self):
         self.engine.run("search", FakeWorker(self.job))

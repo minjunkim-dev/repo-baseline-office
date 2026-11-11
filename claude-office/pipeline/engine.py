@@ -312,7 +312,7 @@ CONTROL = ("task.json", "state.json", "pr.txt", "pr.diff", "run.lock", "repo/.gi
 
 def check_profile(job):
     """Seatbelt rules for the check stage, the same writes the worker's sandbox allows: the task folder, minus its
-    control files. No network but this machine. No reads in the home folder (credentials) but the task folder, this
+    control files. No network but localhost and unix sockets in the task folder. No reads in the home folder (credentials) but the task folder, this
     checkout and the product's git data, like blockReadsOutsideWorkingDirectories for the worker. The worker's own `engine.py test` already runs in Claude Code's
     sandbox, which refuses a sandbox inside it, so only the engine's check stage uses this."""
     quote = json.dumps  # SBPL strings take the same escapes as JSON for quotes and backslashes
@@ -323,7 +323,8 @@ def check_profile(job):
                             capture_output=True, text=True, env=SAFE_GIT).stdout.strip()
     readable = " ".join(f"(subpath {quote(str(Path(p).resolve()))})" for p in (job, BASELINE, *([common] if common else [])))
     return ("(version 1) (allow default)\n"
-            "(deny network-outbound) (allow network-outbound (remote ip \"localhost:*\") (remote unix-socket))\n"
+            # Unix sockets only in the task folder: one outside, such as /var/run/docker.sock, can start processes outside the sandbox.
+            f"(deny network-outbound) (allow network-outbound (remote ip \"localhost:*\") (remote unix-socket (subpath {quote(str(real))})))\n"
             f"(deny file-write*) (allow file-write* (subpath {quote(str(real))}) (subpath \"/dev\"))\n"
             f"(deny file-write* {deny})\n"
             f"(deny file-read* (subpath {quote(str(Path.home().resolve()))})) (allow file-read* {readable})\n")
