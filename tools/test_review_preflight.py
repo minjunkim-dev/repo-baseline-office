@@ -148,16 +148,16 @@ class MainTest(unittest.TestCase):
 
     def test_json_gives_the_same_facts_and_a_runnable_diff_argv(self):
         self.commit("docs/a.md")
-        self.commit("web/.env.example")
+        self.commit("웹/.env.example")
         head = self.publish()
-        os.chdir("web")
+        os.chdir("웹")
         code, out = self.main(head, False, "--json")
         self.assertEqual(code, 0)
         self.assertTrue(out.isascii())
         result = json.loads(out)
         self.assertEqual({k: v for k, v in result.items() if k != "diff_argv"}, {
             "pr": 7, "fork": False, "head": head, "base": "refs/remotes/origin/main",
-            "worktree": "same", "unreviewed_examples": ["web/.env.example"], "secret_hits": []})
+            "worktree": "same", "unreviewed_examples": ["웹/.env.example"], "secret_hits": []})
         shown = subprocess.run(result["diff_argv"], check=True, capture_output=True, text=True).stdout
         self.assertIn("docs/a.md", shown)
         self.assertNotIn(".env.example", shown)
