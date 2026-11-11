@@ -4,6 +4,7 @@
 
 ## 2026-11 — 재설계 이후
 
+- (repo-baseline-office) 엔진이 중간에 죽은 뒤 `run`을 다시 돌리면 남은 hc 터미널 때문에 traceback으로 끝나던 것을 고쳤다(#14). `run`은 과제마다 잠금을 잡고, 같은 이름의 남은 터미널을 닫고 띄우며, `hc run` 실패는 `BLOCKED.md`로 남긴다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `engine.py preflight`가 `review_preflight.py --json`을 읽는다. 전에는 출력 마지막 `diff:` 줄을 정규식으로 맞춰 base·head를 꺼냈다. 작업자에게는 그 JSON이 그대로 보인다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 원본 PR minjunkim-dev/repo-baseline#127과 같게 `docs/archive/`를 지웠다. `claude-office/HANDOFF.md`의 남은 일 표에서 닫은 #16을 뺐다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `blockReadsOutsideWorkingDirectories`가 켜지면 작업자의 `cd`가 거부되어 구현 단계가 테스트를 돌리지 못했다(#23). 작업자는 이제 `engine.py test <과제>`로 테스트를, `engine.py preflight <과제>`로 리뷰 전 확인을 `repo/`에서 돌리고 diff 본문을 `pr.diff`로 받는다. leader는 check·test를 `--allow`로 따로 등록하지 않는다. 소비 레포가 옮길 일은 없다.

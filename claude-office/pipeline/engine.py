@@ -12,6 +12,7 @@ Exit codes for run: 0 done, 3 waiting for a person, 4 blocked.
 """
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -92,7 +93,14 @@ def run_worker(name, cwd, argv, message):
         version = ""
     if error := claude_too_old(version):
         return error
-    hc("run", "--bg", "--name", name, "--cwd", str(cwd), binary, *argv[1:])
+    # A terminal of this name is left over from an engine that died mid-stage; run() holds the task lock, so no live
+    # engine owns it. Its worker may still be writing: closing it is what a second try of the stage needs anyway.
+    hc("kill", name, check=False)
+    hc("rm", name, check=False)
+    try:
+        hc("run", "--bg", "--name", name, "--cwd", str(cwd), binary, *argv[1:])
+    except subprocess.CalledProcessError as error:
+        return f"hc run failed: {(error.stderr or error.stdout or '').strip()}"
     try:
         hc("wait", "--timeout", "90", name, check=False)
         if "trust this folder" in hc("read", "--lines", "0", name, check=False):
@@ -160,6 +168,12 @@ def run(name, runner=run_worker):
     error = missing(job, name, "task.json")
     if error:
         print(error, file=sys.stderr)
+        return 2
+    lock = open(job / "run.lock", "w")  # noqa: SIM115 - held until this process ends, even when it is killed
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print(f"another engine.py run {name} is running", file=sys.stderr)
         return 2
     task, config = load(job / "task.json", None), load(STAGES, None)
     flow = config["flow"]
