@@ -4,6 +4,7 @@
 
 ## 2026-11 — 재설계 이후
 
+- (repo-baseline-office) 검사 단계도 테스트를 sandbox(macOS `sandbox-exec`)에서 돌린다(#29). 쓰기는 과제 폴더만, 네트워크는 이 기기 안만, 홈 폴더 읽기는 막는다. macOS가 아니면 검사 단계에서 멈춘다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 작업자의 Bash를 Claude Code sandbox에서 돌린다(#15). 작업자가 쓴 테스트는 과제 폴더와 커밋에 필요한 git 데이터에만 쓸 수 있고, 엔진의 제어 파일과 git 설정·hook은 고치지 못한다. 엔진이 sandbox 밖에서 돌리는 git은 `core.fsmonitor` 같은 설정을 환경 변수로 끈다. `gh`·`preflight`·`push`는 키체인이 필요해 sandbox 밖에서 돈다. 검사 단계는 아직 sandbox 밖이다(#29). 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 엔진이 중간에 죽은 뒤 `run`을 다시 돌리면 남은 hc 터미널 때문에 traceback으로 끝나던 것을 고쳤다(#14). `run`은 과제마다 잠금을 잡고, 같은 이름의 남은 터미널을 닫고 띄우며, `hc run` 실패는 `BLOCKED.md`로 남긴다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `engine.py preflight`가 `review_preflight.py --json`을 읽는다. 전에는 출력 마지막 `diff:` 줄을 정규식으로 맞춰 base·head를 꺼냈다. 작업자에게는 그 JSON이 그대로 보인다. 소비 레포가 옮길 일은 없다.
