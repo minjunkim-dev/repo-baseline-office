@@ -407,6 +407,10 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(baseline(), office.resolve().parent)
         (office / "baseline.path").write_text(f"{ROOT}\n", encoding="utf-8")
         self.assertEqual(baseline(), ROOT)
+        for text in ("clone\n", "\n"):  # would follow the working folder, which for a worker is its writable task folder
+            (office / "baseline.path").write_text(text, encoding="utf-8")
+            with self.assertRaises(SystemExit):
+                baseline()
 
     def test_preflight_runs_the_baseline_script_in_repo_for_pr_txt(self):
         with contextlib.redirect_stderr(io.StringIO()):

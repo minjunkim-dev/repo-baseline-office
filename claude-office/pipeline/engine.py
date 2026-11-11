@@ -30,7 +30,11 @@ OFFICE = PIPELINE.parent
 # The repo-baseline clone whose prompts/ and tools/ the stages use. A person writes its path in baseline.path
 # (git ignores it, workers cannot write it); without the file the office checkout sits inside that clone.
 _PATH = OFFICE / "baseline.path"
-BASELINE = Path(_PATH.read_text(encoding="utf-8").strip()).expanduser().resolve() if _PATH.exists() else OFFICE.parent
+BASELINE = Path(_PATH.read_text(encoding="utf-8").strip()).expanduser() if _PATH.exists() else OFFICE.parent
+# A relative or empty path would follow the working folder; a worker runs preflight from its task folder, which it can write.
+if not BASELINE.is_absolute():
+    sys.exit(f"{_PATH} must hold the absolute path of the repo-baseline clone")
+BASELINE = BASELINE.resolve()
 JOBS = Path(os.environ.get("OFFICE_JOBS", OFFICE / "jobs"))
 STAGES = Path(os.environ.get("OFFICE_STAGES", PIPELINE / "stages.json"))
 DONE, WAIT, BLOCKED = 0, 3, 4
