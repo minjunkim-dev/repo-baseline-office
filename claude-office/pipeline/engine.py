@@ -6,6 +6,7 @@
   engine.py approve <task>    a person approves the current design file (bound to its sha256)
   engine.py workers           show every task's stage from files only
   engine.py test <task>       run the task's test command in its repo/ (workers cannot cd there)
+  engine.py preflight <task>  run repo-baseline's review preflight for pr.txt in its repo/
 
 Exit codes for run: 0 done, 3 waiting for a person, 4 blocked.
 """
@@ -249,6 +250,18 @@ def test(name):
     return run_test(job, load(job / "task.json", None)).returncode
 
 
+def preflight(name):
+    """review_preflight.py reads the git repository of its working folder; a worker's folder is inside the office checkout."""
+    job = JOBS / name
+    error = missing(job, name, "task.json", "pr.txt")
+    if error:
+        print(error, file=sys.stderr)
+        return 2
+    pr = (job / "pr.txt").read_text(encoding="utf-8").split()  # a person wrote it; workers cannot edit it
+    script = BASELINE / "tools/review_preflight.py"
+    return subprocess.run([sys.executable, str(script), *pr[:1]], cwd=job / "repo").returncode
+
+
 def approve(name):
     job = JOBS / name
     error = missing(job, name, "task.json", "state.json")
@@ -301,9 +314,9 @@ def main(argv=None):
     created.add_argument("task")
     created.add_argument("--repo", required=True)
     created.add_argument("--test", required=True, help="the product's AGENTS.md test command")
-    created.add_argument("--allow", action="append", default=[], help="extra tool rule, e.g. 'Bash(npm test)'")
+    created.add_argument("--allow", action="append", default=[], help="extra tool rule run from the task folder, e.g. 'Bash(make -C repo lint)'")
     created.add_argument("--base", default="main")
-    for command in ("run", "approve", "test"):
+    for command in ("run", "approve", "test", "preflight"):
         sub.add_parser(command).add_argument("task")
     sub.add_parser("workers")
     args = parser.parse_args(argv)
@@ -311,7 +324,7 @@ def main(argv=None):
         return new(args.task, args.repo, args.test, args.allow, args.base)
     if args.command == "workers":
         return workers()
-    return {"run": run, "approve": approve, "test": test}[args.command](args.task)
+    return {"run": run, "approve": approve, "test": test, "preflight": preflight}[args.command](args.task)
 
 
 if __name__ == "__main__":

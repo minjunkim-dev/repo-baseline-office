@@ -109,7 +109,12 @@ class PipelineTests(unittest.TestCase):
         self.assertIn(engine_test, r_argv)
         self.assertFalse([r for r in d_argv + i_argv + r_argv if r.startswith("Bash(cd")])
         self.assertFalse([r for r in d_argv if "commit" in r])
-        self.assertTrue(any("review_preflight.py" in rule for rule in r_argv))
+        # review_preflight.py reads the repository of its folder, and the worker's folder is inside the office checkout.
+        self.assertIn(f"Bash(python3 {self.engine.OFFICE}/pipeline/engine.py preflight search)", r_argv)
+        self.assertFalse([r for r in r_argv if "review_preflight.py" in r])
+        # Without cd, a git rule lacking -C repo reads the office checkout instead of the product.
+        allowed = [r for a in (d_argv, i_argv, r_argv) for r in a[a.index("--allowedTools"):a.index("--disallowedTools")]]
+        self.assertFalse([r for r in allowed if r.startswith("Bash(git ") and not r.startswith("Bash(git -C ")])
         for argv in (d_argv, i_argv, r_argv):
             # Write verbs name the product worktree: the worker's folder sits inside the office checkout.
             self.assertFalse([r for r in argv if r.startswith(("Bash(git add", "Bash(git commit", "Bash(git push", "Bash(gh pr checkout"))])
@@ -302,6 +307,17 @@ class PipelineTests(unittest.TestCase):
         self.assertNotEqual(self.engine.test("search"), 0)
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(self.engine.test("nope"), 2)
+
+    def test_preflight_runs_the_baseline_script_in_repo_for_pr_txt(self):
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(self.engine.preflight("search"), 2)  # no pr.txt yet
+        (self.job / "pr.txt").write_text("https://github.com/o/r/pull/1\n")
+        with unittest.mock.patch.object(self.engine.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            self.assertEqual(self.engine.preflight("search"), 0)
+        argv, kwargs = run.call_args
+        self.assertEqual(argv[0][1:], [str(self.engine.BASELINE / "tools/review_preflight.py"), "https://github.com/o/r/pull/1"])
+        self.assertEqual(kwargs["cwd"], self.job / "repo")
 
     def test_workers_reads_files_only(self):
         self.engine.run("search", FakeWorker(self.job))
