@@ -1,5 +1,7 @@
 # claude-office
 
+> 2026-11-12: `claude-office/`는 git 기록째 [minjunkim-dev/repo-office](https://github.com/minjunkim-dev/repo-office)로 옮겼다. 이어서 고칠 일은 그 저장소에서 한다. 이 저장소는 보관한다(읽기 전용).
+
 PR을 열기 전의 작업을 단계로 나눠 돌리는 실험 프로필이다. PR을 연 뒤의 리뷰·병합·회고는 repo-baseline(`../POLICY.md`, `../prompts/`)을 그대로 따른다. 여기서 그 규칙을 다시 적거나 바꾸지 않는다.
 
 ## 구조

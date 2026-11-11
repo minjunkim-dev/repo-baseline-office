@@ -1,5 +1,7 @@
 # 이어받기
 
+> 2026-11-12: `claude-office/`는 git 기록째 [minjunkim-dev/repo-office](https://github.com/minjunkim-dev/repo-office)로 옮겼다. 이어서 고칠 일은 그 저장소에서 한다. 이 저장소는 보관한다(읽기 전용).
+
 이 문서는 다른 사람·계정·에이전트가 claude-office 작업을 바로 이어받기 위한 기록이다. 2026-11-10에 PR #10과 함께 썼다. 남은 일은 GitHub 이슈에 있고, 이 문서는 그 배경과 함정을 적는다.
 
 ## 1. 지금 상태
