@@ -8,10 +8,11 @@
   engine.py test <task>       run the task's test command in its repo/ (workers cannot cd there)
   engine.py preflight <task>  run repo-baseline's review preflight for pr.txt in its repo/, diff into pr.diff
 
-Exit codes for run: 0 done, 3 waiting for a person, 4 blocked.
+Exit codes for run: 0 done, 2 no such task or another run of it is going, 3 waiting for a person, 4 blocked.
 """
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -36,6 +37,12 @@ _SAFE = {"core.fsmonitor": "false", "diff.ignoreSubmodules": "all", "core.hooksP
          "fetch.recurseSubmodules": "false", "submodule.recurse": "false", "protocol.ext.allow": "never"}
 SAFE_GIT = {**os.environ, "GIT_CONFIG_COUNT": str(len(_SAFE)),
             **{f"GIT_CONFIG_{kind}_{i}": v for i, kv in enumerate(_SAFE.items()) for kind, v in zip(("KEY", "VALUE"), kv)}}
+# hc terminal names are global to the hc core; this tag keeps another checkout's jobs folder from sharing them.
+TAG = hashlib.sha256(str(JOBS.resolve()).encode()).hexdigest()[:4]
+
+
+class NotStarted(str):
+    """An error from before the worker started: its session was never created, so the next try must not --resume."""
 
 
 def load(path, default):
@@ -134,12 +141,19 @@ def run_worker(name, cwd, argv, message):
     except (OSError, ValueError, subprocess.TimeoutExpired):  # hung, unrunnable or not UTF-8: block like an unreadable version
         version = ""
     if error := claude_too_old(version):
-        return error
-    hc("run", "--bg", "--name", name, "--cwd", str(cwd), binary, *argv[1:])
+        return NotStarted(error)
+    # A terminal of this name is left over from an engine that died mid-stage: run() holds the task lock and the name
+    # carries this jobs folder's TAG, so no live engine owns it. Its worker may still be writing: closing it is what a second try of the stage needs anyway.
+    hc("kill", name, check=False)
+    hc("rm", name, check=False)
+    try:
+        hc("run", "--bg", "--name", name, "--cwd", str(cwd), binary, *argv[1:])
+    except subprocess.CalledProcessError as error:
+        return NotStarted(f"hc run failed: {(error.stderr or error.stdout or '').strip()}")
     try:
         hc("wait", "--timeout", "90", name, check=False)
         if "trust this folder" in hc("read", "--lines", "0", name, check=False):
-            return "folder is not trusted: open Claude Code here once and trust it"
+            return NotStarted("folder is not trusted: open Claude Code here once and trust it")
         # A task passed on the command line is dropped after a dialog or --resume, so send it after start.
         reply = json.loads(hc("send", "--wait", name, message, check=False) or "{}").get("wait") or {}
         while reply.get("reason") == "timeout":
@@ -204,6 +218,17 @@ def run(name, runner=run_worker):
     if error:
         print(error, file=sys.stderr)
         return 2
+    # Held until run returns or the process dies (kill -9 included). "a" leaves the mtime that workers shows alone.
+    with open(job / "run.lock", "a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print(f"another engine.py run {name} is running", file=sys.stderr)
+            return 2
+        return advance(job, name, runner)
+
+
+def advance(job, name, runner):
     task, config = load(job / "task.json", None), load(STAGES, None)
     flow = config["flow"]
     ids = [stage["id"] for stage in flow]
@@ -255,8 +280,8 @@ def run(name, runner=run_worker):
             prompt = job / f"{stage['id']}.prompt.md"
             prompt.write_text(fill((PIPELINE / stage["prompt"]).read_text(encoding="utf-8"), job, task), encoding="utf-8")
             # The task folder sits inside the trusted office checkout; a fresh worktree would show the trust dialog.
-            error = runner(f"{name}-{stage['id']}"[:32], job, claude_argv(config, stage, job, task, state), f"Read {prompt} and follow it exactly.")
-            if stage["session"] not in state["sessions"]:
+            error = runner(f"{TAG}-{name}-{stage['id']}"[:32], job, claude_argv(config, stage, job, task, state), f"Read {prompt} and follow it exactly.")
+            if stage["session"] not in state["sessions"] and not isinstance(error, NotStarted):
                 state["sessions"].append(stage["session"])
                 save(state_path, state)  # a blocked stage returns below; the next run must still --resume
             if error:
@@ -372,7 +397,7 @@ def workers():
     for job in sorted(p for p in JOBS.glob("*") if (p / "task.json").exists()):
         state = load(job / "state.json", {"stage": "-", "since": time.time()})
         stage = "blocked" if (job / "BLOCKED.md").exists() else state["stage"]
-        files = [p for p in job.iterdir() if p.is_file()]
+        files = [p for p in job.iterdir() if p.is_file() and p.name != "run.lock"]
         last = max(files, key=lambda p: p.stat().st_mtime)
         minutes = int((time.time() - state["since"]) // 60)
         print(f"{job.name:<24} {stage:<10} {minutes:>7}분  {last.name} {datetime.fromtimestamp(last.stat().st_mtime):%H:%M}")
