@@ -1,9 +1,10 @@
 # 변경 기록
 
-항목당 1~3줄. 재설계 전 기록은 [docs/archive/CHANGELOG-2026.md](docs/archive/CHANGELOG-2026.md)에 있다.
+항목당 1~3줄. 재설계 전 기록은 [CHANGELOG-2026.md](https://github.com/minjunkim-dev/repo-baseline/blob/c3f6d569871f51b83c1405dee34db6850a0b30e3/docs/archive/CHANGELOG-2026.md)(지운 보관 문서의 마지막 판)에 있다.
 
 ## 2026-11 — 재설계 이후
 
+- (repo-baseline-office) 원본 PR minjunkim-dev/repo-baseline#127과 같게 `docs/archive/`를 지웠다. `claude-office/HANDOFF.md`의 남은 일 표에서 닫은 #16을 뺐다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `blockReadsOutsideWorkingDirectories`가 켜지면 작업자의 `cd`가 거부되어 구현 단계가 테스트를 돌리지 못했다(#23). 작업자는 이제 `engine.py test <과제>`로 테스트를, `engine.py preflight <과제>`로 리뷰 전 확인을 `repo/`에서 돌리고 diff 본문을 `pr.diff`로 받는다. leader는 check·test를 `--allow`로 따로 등록하지 않는다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `claude --version`이 30초 안에 끝나지 않거나 실행되지 않으면 엔진이 `BLOCKED.md`를 쓰고 멈춘다. 전에는 엔진이 그대로 멈추거나 traceback으로 끝났다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 엔진이 작업자를 띄우기 전에 `claude --version`을 확인한다. 2.1.257 미만이거나 판을 읽지 못하면 `BLOCKED.md`를 쓰고 멈춘다. 낮은 판은 `blockReadsOutsideWorkingDirectories`를 말없이 무시한다. 소비 레포가 옮길 일은 없다.
@@ -14,6 +15,7 @@
 - (repo-baseline-office) office 리뷰 단계를 실제 PR(#17)로 돌려 막힌 곳을 고쳤다. 리뷰 전 확인은 office 체크아웃의 스크립트를 경로로 돌리고 PR URL만 받는다. 리뷰 작업자가 PR 본문 Review 칸을 올리는 명령을 지시서에 적었다. 구현·리뷰 단계에 `git rev-parse`와 절대 경로 `git status`를 허용했다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) `engine.py`의 `run`·`approve`가 과제 폴더, `task.json`, `state.json`(`approve`만)이 없으면 traceback 대신 stderr 한 줄과 종료 코드 2로 끝난다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 기준 파일을 원본 `c3f6d56`과 같게 맞췄다. `claude-office/`를 다시 짰다. 상주 세션은 leader 하나다. 작업자는 `pipeline/engine.py`가 `stages.json`대로 `hc` 터미널에 단계마다 띄운다. 설계 승인은 `design.md` 해시에 묶었다. 원본과 겹치던 관문·MEMORY·HANDBOOK·reviewer 규칙은 지웠다. 소비 레포가 옮길 일은 없다.
+- `docs/archive/`를 지웠다. 현행 규칙이 아니고 읽지 않는 문서였다. 근거 링크는 지우기 직전 커밋(`c3f6d56`)의 고정 링크로 바꿨다. 소비 레포가 옮길 일은 없다.
 - `POLICY.md` §5: 확인 규칙이 없는 하네스는 병합을 막아 두고 그 하네스로는 에이전트 병합을 쓰지 않는다. 전에는 소유자가 막는 규칙을 빼고 쓸 수 있다고 적어, 같은 줄의 "병합에 확인을 받는다"와 어긋났다. 소비 레포는 POLICY를 링크로 따르므로 옮길 일은 없다. 그런 하네스에서 막는 규칙을 뺀 소비 레포는 다시 넣는다.
 - 에이전트 권한 예시의 Cursor 절: Cursor가 셸 명령을 묻지 않는다고 보므로 deny를 빼고 병합하는 길을 지웠다. Cursor로는 POLICY §5의 에이전트 병합을 쓰지 않는다. 브랜치 보호와 필수 CI가 소유자 `gh` 병합을 막지 못한다는 맨 위 문단과 맞췄다. 소비 레포가 옮길 일은 없다.
 - matt-skills의 `check_skills.py --harness claude`가 `~/.claude/settings.json`에서 끈 플러그인의 캐시 사본을 세지 않는다. 전에는 리뷰어가 부를 수 없는 사본을 찾았다고 출력할 수 있었다. 소비 레포가 옮길 일은 없다.

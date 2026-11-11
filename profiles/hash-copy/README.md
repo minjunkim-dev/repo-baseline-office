@@ -1,6 +1,6 @@
 # hash-copy 프로필
 
-선택 프로필이다. 이 저장소의 파일을 소비 레포에 복사하고 sha256을 기록해서, 복사본을 손으로 고치면 CI가 잡게 한다. 코어 적용은 `cp` 몇 번이고 이 프로필이 필요 없다(`docs/archive/redesign-2026-11.md` D6).
+선택 프로필이다. 이 저장소의 파일을 소비 레포에 복사하고 sha256을 기록해서, 복사본을 손으로 고치면 CI가 잡게 한다. 코어 적용은 `cp` 몇 번이고 이 프로필이 필요 없다([재설계안](https://github.com/minjunkim-dev/repo-baseline/blob/c3f6d569871f51b83c1405dee34db6850a0b30e3/docs/archive/redesign-2026-11.md) D6).
 
 ## 언제 켜는가
 

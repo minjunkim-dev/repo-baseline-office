@@ -1,4 +1,4 @@
-"""Layout checks for the redesigned baseline (docs/archive/redesign-2026-11.md §7)."""
+"""Layout checks for the redesigned baseline (redesign plan §7: https://github.com/minjunkim-dev/repo-baseline/blob/c3f6d569871f51b83c1405dee34db6850a0b30e3/docs/archive/redesign-2026-11.md)."""
 from pathlib import Path
 import re
 import unittest
@@ -11,7 +11,7 @@ LINK = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
 def docs():
     for path in sorted(ROOT.rglob("*.md")):
         rel = path.relative_to(ROOT).as_posix()
-        if rel.startswith((".git/", "graft/", "docs/archive/")):
+        if rel.startswith((".git/", "graft/")):
             continue
         yield path
 
