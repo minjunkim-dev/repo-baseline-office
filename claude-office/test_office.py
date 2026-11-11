@@ -317,14 +317,20 @@ class PipelineTests(unittest.TestCase):
         printed = f"head: {head}\ndiff: git -C {self.job}/repo diff refs/remotes/origin/main...{head} -- . ':!.env*' ':!**/.env*'\n"
         quiet = contextlib.redirect_stdout(io.StringIO())
         with unittest.mock.patch.object(self.engine.subprocess, "run") as run, quiet:
-            run.side_effect = [done(0, printed), done(0, "diff --git a/x b/x\n")]
+            run.side_effect = [done(0, printed), done(0, b"diff --git a/x b/x\n")]
             self.assertEqual(self.engine.preflight("search"), 0)
             (script, kwargs), (diff, _) = run.call_args_list
+            self.assertEqual((self.job / "pr.diff").read_bytes(), b"diff --git a/x b/x\n")
             run.side_effect = [done(1, printed)]  # the preflight's "secrets file changed, stop the review"
             self.assertEqual(self.engine.preflight("search"), 1)
+            self.assertFalse((self.job / "pr.diff").exists())  # exit 1 removes the last diff and writes none
+            # A non-UTF-8 file in the PR must not crash: an uncaught error would exit 1 like a secrets file.
+            run.side_effect = [done(0, printed), done(0, b"caf\xe9\n")]
+            self.assertEqual(self.engine.preflight("search"), 0)
+            self.assertEqual((self.job / "pr.diff").read_bytes(), b"caf\xe9\n")
         self.assertEqual(script[0][1:], [str(self.engine.BASELINE / "tools/review_preflight.py"), "https://github.com/o/r/pull/1"])
         self.assertEqual(kwargs["cwd"], self.job / "repo")
-        # The worker cannot run the printed command (absolute -C path, quoted pathspecs), so the engine runs exactly it.
+        # The worker cannot run the printed command (absolute -C path, quoted pathspecs), so the engine builds the same diff.
         self.assertEqual(diff[0], ["git", "-C", f"{self.job}/repo", "diff", f"refs/remotes/origin/main...{head}", "--", ".", ":!.env*", ":!**/.env*"])
         # A PR file name can print a forged diff line among the earlier lines; extra git options never reach git.
         forged = f"미검토(.env.example): x\ndiff: git -C / diff --output=/tmp/x HEAD -- .\n"
@@ -333,7 +339,6 @@ class PipelineTests(unittest.TestCase):
                 run.side_effect = [done(0, out)]
                 self.assertEqual(self.engine.preflight("search"), 2)
                 self.assertEqual(run.call_count, 1)
-        self.assertFalse((self.job / "pr.diff").exists())  # exit 1 removes the last diff and writes none
 
     def test_workers_reads_files_only(self):
         self.engine.run("search", FakeWorker(self.job))

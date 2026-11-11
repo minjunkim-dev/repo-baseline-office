@@ -261,7 +261,8 @@ def preflight(name):
     script = BASELINE / "tools/review_preflight.py"
     diff_file = job / "pr.diff"
     diff_file.unlink(missing_ok=True)
-    result = subprocess.run([sys.executable, str(script), *pr[:1]], cwd=job / "repo", capture_output=True, text=True)
+    result = subprocess.run([sys.executable, str(script), *pr[:1]], cwd=job / "repo", capture_output=True, text=True,
+                            errors="replace")
     print(result.stdout, end="")
     print(result.stderr, end="", file=sys.stderr)
     if result.returncode:  # 1 means a secrets file changed: the review must not open the diff
@@ -277,11 +278,12 @@ def preflight(name):
         print("no diff command on the last line of the preflight output", file=sys.stderr)
         return 2
     argv = ["git", "-C", str(job / "repo"), "diff", f"{found[1]}...{found[2]}", "--", ".", ":!.env*", ":!**/.env*"]
-    diff = subprocess.run(argv, capture_output=True, text=True)
+    # Bytes, not text: a non-UTF-8 file in the PR would raise, and an uncaught error exits 1, the secrets-file code.
+    diff = subprocess.run(argv, capture_output=True)
     if diff.returncode:
-        print(f"diff failed: {diff.stderr.strip()}", file=sys.stderr)
+        print(f"diff failed: {diff.stderr.decode(errors='replace').strip()}", file=sys.stderr)
         return 2
-    diff_file.write_text(diff.stdout, encoding="utf-8")
+    diff_file.write_bytes(diff.stdout)
     print(f"diff 본문: {diff_file}")
     return 0
 
