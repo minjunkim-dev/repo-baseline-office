@@ -9,7 +9,7 @@
 ## 지킬 것
 
 - 원본은 공개 저장소 `https://github.com/minjunkim-dev/repo-baseline`의 `main`이다. 저장소 밖 임시 폴더에 clone해서 읽는다.
-- 읽을 것은 `templates/core/`, `POLICY.md`, (GitHub이면) `templates/github/`뿐이다. `docs/archive/`와 옛 문서는 읽지 않는다.
+- 읽을 것은 `templates/core/`, `POLICY.md`, (GitHub이면) `templates/github/`뿐이다. 옛 문서는 읽지 않는다.
 - 있는 파일을 덮어쓰지 않는다. 이미 있으면 템플릿 내용을 합치고, 합친 내용을 보고한다.
 - 비밀값 파일(`.env*`, 키)을 읽거나 만들거나 커밋하지 않는다.
 - `main`에 직접 push하지 않는다. PR을 병합하지 않는다.
