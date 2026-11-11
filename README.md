@@ -1,8 +1,8 @@
 # repo-baseline-office
 
-`minjunkim-dev/repo-baseline`의 `c3f6d56`과 같은 기준 위에 `claude-office/`를 얹은 후보 저장소다. 정본은 원본이다. `claude-office/`는 PR을 열기 전의 작업을 단계로 나눠 돌리는 실험이고, 소비 레포에 복사하지 않는다. 구조와 규칙은 [claude-office/AGENTS.md](claude-office/AGENTS.md)에 있다.
+`minjunkim-dev/repo-baseline`의 `49214f2`와 같은 기준 위에 `claude-office/`를 얹은 후보 저장소다. 정본은 원본이다. `claude-office/`는 PR을 열기 전의 작업을 단계로 나눠 돌리는 실험이고, 소비 레포에 복사하지 않는다. 구조와 규칙은 [claude-office/AGENTS.md](claude-office/AGENTS.md)에 있다.
 
-`claude-office/` 밖의 파일은 원본과 같게 둔다. 다른 점은 `.github/repository-settings.json`의 저장소 이름·ID, CI의 office 단계, `AGENTS.md`의 test 명령·길잡이 한 줄, 이 머리말, `CHANGELOG.md` 한 줄뿐이다. 원본을 갱신하면 그 판으로 다시 맞추고 이 다섯 곳만 다시 더한다. 소비 레포 셋업과 `profiles/hash-copy/apply_baseline.py` 실행은 원본에서 한다. 여기서 실행하면 원본에 없는 커밋이 출처로 기록된다.
+`claude-office/` 밖의 파일은 원본과 같게 둔다. 다른 점은 `.github/repository-settings.json`의 저장소 이름·ID, CI의 office 단계, `AGENTS.md`의 test 명령·길잡이 한 줄, 이 머리말, `CHANGELOG.md`의 `(repo-baseline-office)` 줄들뿐이다. 원본을 갱신하면 그 판으로 다시 맞추고 이 다섯 곳만 다시 더한다. 소비 레포 셋업과 `profiles/hash-copy/apply_baseline.py` 실행은 원본에서 한다. 여기서 실행하면 원본에 없는 커밋이 출처로 기록된다.
 
 아래는 원본 README다.
 
