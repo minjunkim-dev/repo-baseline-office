@@ -4,6 +4,7 @@
 
 ## 2026-11 — 재설계 이후
 
+- (repo-baseline-office) `README.md` 머리말이 원본과 다른 곳을 "`CHANGELOG.md` 한 줄"이 아니라 "`(repo-baseline-office)` 줄들"로 적는다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 검사 단계 sandbox가 `HOME=<과제>/tmp/home`, `GIT_CONFIG_GLOBAL=/dev/null`을 기본으로 준다(홈을 막아 Godot·git이 실패함). 작업자의 `engine.py test`는 그대로다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) claude-office의 두 sandbox가 막는 범위(실수·사고)와 시험하지 않은 길을 `claude-office/AGENTS.md`에 적었다. 소비 레포가 옮길 일은 없다.
 - (repo-baseline-office) 검사 단계도 테스트를 sandbox(macOS `sandbox-exec`)에서 돌린다(#29). 쓰기는 과제 폴더만, 네트워크는 localhost와 과제 폴더 안의 unix socket만, 홈 폴더 읽기는 막는다. macOS가 아니면 검사 단계에서 멈춘다. 소비 레포가 옮길 일은 없다.
