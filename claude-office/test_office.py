@@ -315,6 +315,8 @@ class PipelineTests(unittest.TestCase):
         with unittest.mock.patch.object(self.engine.subprocess, "run") as run:
             run.return_value.returncode = 0
             self.assertEqual(self.engine.preflight("search"), 0)
+            run.return_value.returncode = 1  # the preflight's "secrets file changed, stop the review"
+            self.assertEqual(self.engine.preflight("search"), 1)
         argv, kwargs = run.call_args
         self.assertEqual(argv[0][1:], [str(self.engine.BASELINE / "tools/review_preflight.py"), "https://github.com/o/r/pull/1"])
         self.assertEqual(kwargs["cwd"], self.job / "repo")
