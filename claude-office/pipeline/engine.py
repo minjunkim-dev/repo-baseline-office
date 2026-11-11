@@ -318,6 +318,7 @@ def check_profile(job):
     quote = json.dumps  # SBPL strings take the same escapes as JSON for quotes and backslashes
     real = job.resolve()
     deny = " ".join(f"(literal {quote(str(real / n))}) (subpath {quote(str(real / n))})" for n in CONTROL)
+    deny += f" (literal {quote(str(real / 'repo'))})"  # renaming repo/ away and back would rewrite repo/.git
     common = subprocess.run(["git", "-C", str(job / "repo"), "rev-parse", "--path-format=absolute", "--git-common-dir"],
                             capture_output=True, text=True, env=SAFE_GIT).stdout.strip()
     readable = " ".join(f"(subpath {quote(str(Path(p).resolve()))})" for p in (job, BASELINE, *([common] if common else [])))

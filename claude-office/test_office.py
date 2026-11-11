@@ -440,9 +440,11 @@ class PipelineTests(unittest.TestCase):
         script = "; ".join(f"(echo x >> {p} && echo {name} ok || echo {name} denied)" for name, p in (
             ("repo", "kept.txt"), ("outside", outside), ("task", self.job / "task.json"), ("pr", self.job / "pr.txt"),
             ("gitfile", self.job / "repo/.git"), ("claude", self.job / "CLAUDE.md"))) + '; echo x > "$TMPDIR/t" && echo tmp ok; (ls ~ >/dev/null 2>&1 && echo home ok || echo home denied)'
+        script += f"; (mv {self.job / 'repo'} {self.job / 'moved'} 2>/dev/null && echo rename ok || echo rename denied)"
         result = self.engine.run_test(self.job, {"test": script}, sandboxed=True, capture_output=True, text=True)
         self.assertEqual(result.stdout.split("\n")[:-1], ["repo ok", "outside denied", "task denied", "pr denied",
-                                                         "gitfile denied", "claude denied", "tmp ok", "home denied"])
+                                                         "gitfile denied", "claude denied", "tmp ok", "home denied",
+                                                         "rename denied"])
         self.assertFalse(outside.exists() or (self.job / "pr.txt").exists() or (self.job / "CLAUDE.md").exists())
 
     def test_workers_reads_files_only(self):
